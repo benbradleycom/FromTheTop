@@ -52,7 +52,7 @@ function typing_panel(word, show_hint)
 
     -- Behaviour
     local actions = {}
-    if show_hint then actions[#actions+1] = play_intro(); end
+    if show_hint then actions[#actions+1] = play_hint(); end
     actions[#actions+1] = am.parallel{
         clear_hint(),
         user_input(),
@@ -66,17 +66,17 @@ function typing_panel(word, show_hint)
 	}
 end
 
-function play_intro()
+function play_hint()
 	return coroutine.create(function()
-		local node = coroutine.yield()
+		local panel_node = coroutine.yield()
 
 		-- Type out word
-		for i=1, #node.word do
+		for i=1, #panel_node.word do
 			am.wait(am.delay(0.25))
-			node.word_chars_to_show = i
+			panel_node.word_chars_to_show = i
 		end
 		am.wait(am.delay(0.25))
-		node.cursor = false
+		panel_node.cursor = false
 	end)
 end
 
