@@ -5,7 +5,7 @@ local win = am.window{
 	clear_color = vec4(1, 0, 0.5, 1)
 }
 
-function panel_typing(word, aspect_ratio, animation_state)
+function typing_panel(word, show_hint)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
@@ -51,15 +51,13 @@ function panel_typing(word, aspect_ratio, animation_state)
     end
 
     -- Behaviour
-    local_root:tag"typing_panel":action(
-		am.series{
-			play_intro(),
-            am.parallel{
-                clear_hint(),
-                user_input(),
-            },
-		}
-    )
+    local actions = {}
+    if show_hint then actions[#actions+1] = play_intro(); end
+    actions[#actions+1] = am.parallel{
+        clear_hint(),
+        user_input(),
+    }
+    local_root:tag"typing_panel":action(am.series(actions))
 
 	return local_root ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
@@ -148,7 +146,7 @@ if dictfile then
     -- Create scene
     win.scene = am.group() ^ {
         am.scale(400, 300) ^ am.scale(0.8)
-        ^ panel_typing(randomword, 0.5, 0)
+        ^ typing_panel(randomword, false)
     }
 
     win.scene:action(
