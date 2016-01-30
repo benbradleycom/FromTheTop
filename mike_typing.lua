@@ -52,10 +52,10 @@ function typing_panel(word, show_hint)
 
     -- Behaviour
     local actions = {}
-    if show_hint then actions[#actions+1] = play_hint(); end
+    if show_hint then actions[#actions+1] = typing_play_hint(); end
     actions[#actions+1] = am.parallel{
-        clear_hint(),
-        user_input(),
+        typing_clear_hint(),
+        typing_user_input(),
     }
     local_root:tag"typing_panel":action(am.series(actions))
 
@@ -66,7 +66,7 @@ function typing_panel(word, show_hint)
 	}
 end
 
-function play_hint()
+function typing_play_hint()
 	return coroutine.create(function()
 		local panel_node = coroutine.yield()
 
@@ -80,7 +80,7 @@ function play_hint()
 	end)
 end
 
-function clear_hint()
+function typing_clear_hint()
     return am.series{
         -- Show word for a bit
         am.delay(1),
@@ -92,7 +92,7 @@ function clear_hint()
     }
 end
 
-function user_input()
+function typing_user_input()
 	return function(node)
 		for i,letter in ipairs({"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}) do
 			if win:key_pressed(letter) then
@@ -132,7 +132,6 @@ if dictfile then
         if line ~= "" then 
             local match = string.match(line, "(%a%a+)%s+[nv]%.")
             if match then
-            if match == "Aa" then log(match) end
                 dict[index] = string.lower(match)
                 index = index + 1
             end

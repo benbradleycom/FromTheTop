@@ -17,10 +17,10 @@ function unlock_panel(pattern, show_hint)
     local hint_xys = {}
     function local_root:add_hint_node(xy)
         -- add circle around node
-        hint_nodes:append(make_node_circle(grid_def, xy))
+        hint_nodes:append(unlock_make_node_circle(grid_def, xy))
         -- add line between nodes
         if #hint_xys > 0 then
-            hint_nodes:prepend(make_node_line(grid_def, hint_xys[#hint_xys], xy))
+            hint_nodes:prepend(unlock_make_node_line(grid_def, hint_xys[#hint_xys], xy))
         end
         -- record xy coords
         hint_xys[#hint_xys + 1] = xy
@@ -36,10 +36,10 @@ function unlock_panel(pattern, show_hint)
             end
         end
         -- add circle around node
-        user_nodes:append(make_node_circle(grid_def, xy))
+        user_nodes:append(unlock_make_node_circle(grid_def, xy))
         -- add line between nodes
         if #user_xys > 0 then
-            user_nodes:prepend(make_node_line(grid_def, user_xys[#user_xys], xy))
+            user_nodes:prepend(unlock_make_node_line(grid_def, user_xys[#user_xys], xy))
         end
         -- record xy coords
         user_xys[#user_xys + 1] = xy
@@ -71,10 +71,10 @@ function unlock_panel(pattern, show_hint)
 
     -- Behaviour
     local actions = {}
-    if show_hint then actions[#actions+1] = play_hint(); end
+    if show_hint then actions[#actions+1] = unlock_play_hint(); end
     actions[#actions+1] = am.parallel{
-        clear_hint(),
-        user_input(),
+        unlock_clear_hint(),
+        unlock_user_input(),
     }
     local_root:tag"unlock_panel":action(am.series(actions))
 
@@ -85,12 +85,11 @@ function unlock_panel(pattern, show_hint)
         },
         hint_nodes,
         user_nodes,
-        make_grid(grid_def),
---		am.translate(0.5, 0.5) ^ am.scale(2) ^ am.scale(1/0.8) ^ am.scale(1/400, 1/300) ^ am.text("_", vec4(0.9, 0.9, 0.9, 1)),
+        unlock_make_grid(grid_def),
 	}
 end
 
-function node_xy_to_local_xy(grid_def, node_xy)
+function unlock_node_xy_to_local_xy(grid_def, node_xy)
     local dx = grid_def.dx
     local dy = grid_def.dy
     local start_x = -dx * (grid_def.size_x - 1) / 2
@@ -103,9 +102,9 @@ function node_xy_to_local_xy(grid_def, node_xy)
     return local_xy
 end
 
-function make_node_line(grid_def, xy1, xy2)
-    xy1 = node_xy_to_local_xy(grid_def, xy1)
-    xy2 = node_xy_to_local_xy(grid_def, xy2)
+function unlock_make_node_line(grid_def, xy1, xy2)
+    xy1 = unlock_node_xy_to_local_xy(grid_def, xy1)
+    xy2 = unlock_node_xy_to_local_xy(grid_def, xy2)
     local thickness = 0.02
     local line_direction = xy2 - xy1
     local line_length = math.length(line_direction)
@@ -116,17 +115,17 @@ function make_node_line(grid_def, xy1, xy2)
         ^ am.rect(0, 0, line_length, thickness, vec4(0.2, 0.2, 0.2, 1))
 end
 
-function make_node_circle(grid_def, xy)
+function unlock_make_node_circle(grid_def, xy)
     local bg_col = vec4(0.7, 0.7, 0.7, 1)
     local fg_col = vec4(0.2, 0.2, 0.2, 1)
-    local pos = node_xy_to_local_xy(grid_def, xy)
+    local pos = unlock_node_xy_to_local_xy(grid_def, xy)
     return am.group() ^ { 
         am.circle(pos, 0.05, fg_col),
         am.circle(pos, 0.04, bg_col) 
     }
 end
 
-function make_grid(grid_def)
+function unlock_make_grid(grid_def)
     local dots = {}
     local dot_colour= vec4(0,0,0,1)
     local dot_size = 0.01
@@ -135,7 +134,7 @@ function make_grid(grid_def)
 
     for x=0, (grid_def.size_x - 1) do
         for y=0, (grid_def.size_y - 1) do
-            local dot_pos = node_xy_to_local_xy(grid_def, {x, y})
+            local dot_pos = unlock_node_xy_to_local_xy(grid_def, {x, y})
             dots[#dots + 1] = am.circle(dot_pos, dot_size, dot_colour)
         end
     end
@@ -143,7 +142,7 @@ function make_grid(grid_def)
     return am.scale(1) ^ dots
 end
 
-function play_hint()
+function unlock_play_hint()
     return coroutine.create(function()
         local panel_node = coroutine.yield()
         for i=1, #panel_node.pattern do
@@ -153,7 +152,7 @@ function play_hint()
     end)
 end
 
-function clear_hint()
+function unlock_clear_hint()
     return am.series{
         am.delay(1),
         function(panel_node)
@@ -162,7 +161,7 @@ function clear_hint()
     }
 end
 
-function user_input()
+function unlock_user_input()
     return function(panel_node)
         if win:mouse_down("left") or win:mouse_down("right") then
             panel_node:clear_hint()
@@ -176,7 +175,7 @@ function user_input()
             local grid_def = panel_node.grid_def
             for x=0, (grid_def.size_x - 1) do
                 for y=0, (grid_def.size_y - 1) do
-                    local pos = node_xy_to_local_xy(panel_node.grid_def, {x, y})
+                    local pos = unlock_node_xy_to_local_xy(panel_node.grid_def, {x, y})
                     if math.length(pos - mousepos) < hit_radius then
                         panel_node:add_user_node({x, y})
                     end
