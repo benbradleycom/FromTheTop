@@ -168,17 +168,17 @@ function unlock_panel(pattern, show_hint)
     function local_root:won()
         return (not self:lost() and #user_xys == #pattern);
     end
+    function local_root:start()
+        local actions = {}
+        if show_hint then actions[#actions+1] = unlock_play_hint(); end
+        actions[#actions+1] = am.parallel{
+            unlock_clear_hint(),
+            unlock_user_input(),
+        }
+        self:action(am.series(actions))
+    end
 
-    -- Behaviour
-    local actions = {}
-    if show_hint then actions[#actions+1] = unlock_play_hint(); end
-    actions[#actions+1] = am.parallel{
-        unlock_clear_hint(),
-        unlock_user_input(),
-    }
-    local_root:tag"unlock_panel":action(am.series(actions))
-
-	return local_root ^ am.scale(100,100) ^ {
+	return local_root:tag"unlock_panel" ^ am.scale(100,100) ^ {
         am.translate(-0.5, -0.5) ^ {
     		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
             am.rect(0,0,1,1, background_color),
@@ -268,8 +268,8 @@ function unlock_user_input()
             local window_mousepos = win:mouse_position()
             -- hack in the transformation into the panel coordinate space
             local mousepos = vec2(
-                window_mousepos.x / 100,
-                window_mousepos.y / 100
+                window_mousepos.x / 450,
+                window_mousepos.y / 450
             )
             local hit_radius = 0.05
             local grid_def = panel_node.grid_def
@@ -334,15 +334,17 @@ function typing_panel(word, show_hint)
     function local_root:won()
         return (not self:lost() and #word == #user_text);
     end
+    function local_root:start()
+        local actions = {}
+        if show_hint then actions[#actions+1] = typing_play_hint(); end
+        actions[#actions+1] = am.parallel{
+            typing_clear_hint(),
+            typing_user_input(),
+        }
+        self:action(am.series(actions))
+    end
 
-    -- Behaviour
-    local actions = {}
-    if show_hint then actions[#actions+1] = play_intro(); end
-    actions[#actions+1] = am.parallel{
-        clear_hint(),
-        user_input(),
-    }
-    local_root:tag"typing_panel":action(am.series(actions))
+    local_root:tag"typing_panel"
 
 	return local_root ^ am.scale(100,100) ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
@@ -351,7 +353,7 @@ function typing_panel(word, show_hint)
 	}
 end
 
-function play_intro()
+function typing_play_hint()
 	return coroutine.create(function()
 		local node = coroutine.yield()
 
@@ -365,7 +367,7 @@ function play_intro()
 	end)
 end
 
-function clear_hint()
+function typing_clear_hint()
     return am.series{
         -- Show word for a bit
         am.delay(1),
@@ -377,7 +379,7 @@ function clear_hint()
     }
 end
 
-function user_input()
+function typing_user_input()
 	return function(node)
 		for i,letter in ipairs({"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}) do
 			if win:key_pressed(letter) then
@@ -386,12 +388,6 @@ function user_input()
 			end
 		end
 	end
-end
-
-function exit()
-    return function()
-        win:close()
-    end
 end
 
 local dictfile = io.open("dictionary.txt")
@@ -421,7 +417,7 @@ end
 -------------------------------------------------------
 -- panels global array
 -------------------------------------------------------
-panels = { count = 0, nodeTable = {} }
+panels = { current = 0, nodeTable = {} }
 
 function PanelScaleControl(node)
 
@@ -461,12 +457,12 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 3,
+	count = 2, -- FIXME: disabled drums for testing
 }
 
 
 function panels.MakeEmpty()
-	for b=1, panels.count do
+	for b=1, #panels do
 		panels[b] = nil
 	end
 	panels.nodeTable = nil
@@ -494,27 +490,71 @@ function panels.AddOne(activity)
 	scaleNode = p.node"scale"
 	
 	if activity == PanelActivity.word then
-		scaleNode = scaleNode ^ typing_panel(randomword, true)
-		p.text = "dog"
+        p.game = typing_panel(randomword, true)
 	elseif activity == PanelActivity.pattern then
-		scaleNode = scaleNode ^ unlock_panel(test_pattern, true)
-		p.dots = 4
+        p.game = unlock_panel(test_pattern, true)
 	elseif activity == PanelActivity.drums then
-		scaleNode = scaleNode ^ drum_panel()
-		p.snare = true
+        p.game = drum_panel()
 	end
+    scaleNode = scaleNode ^ p.game
 	
 	-- provide nodes a getter to parent
 	function p.node:get_p() return p end
 	function scaleNode:get_p() return p end
 	
 	-- last of all, add p into the table and the node to the scene table
-	panels.count = panels.count + 1
-	p.index = panels.count
-	panels[panels.count] = p
-	panels.nodeTable[panels.count] = p.node
+	panels[#panels + 1] = p
+	p.index = #panels
+	panels.nodeTable[#panels] = p.node
 end
 
+-------------------------------------------------------
+-- panel management functions
+-------------------------------------------------------
+function set_active_panel(panel)
+    panel.state = PanelState.input
+end
+
+function set_docked_panel(panel)
+    panel.state = PanelState.docked
+end
+
+function more_panels()
+    return panels.current + 1 <= #panels
+end
+
+function get_current_panel()
+    return panels[panels.current]
+end
+
+function get_next_panel()
+    if more_panels() then
+        return panels[panels.current + 1]
+    else
+        return nil
+    end
+end
+
+function next_panel()
+    local current_panel = get_current_panel()
+    animate_to_dock(current_panel)
+    set_docked_panel(current_panel)
+
+    local next_panel = nil
+    if more_panels() then
+        panels.current = panels.current + 1
+        next_panel = get_current_panel()
+        animate_from_dock(next_panel)
+        set_active_panel(next_panel)
+    end
+    return next_panel
+end
+
+function animate_to_dock(panel)
+end
+
+function animate_from_dock(panel)
+end
 
 -------------------------------------------------------
 -- dummy puzzle types (panel types)
@@ -526,8 +566,10 @@ for n=1, 7 do
 end
 
 for n=1, 7 do -- demo only
-	if panels[n].activity == PanelActivity.pattern then
+	if panels[n].activity == PanelActivity.word then
 		panels[n].state = PanelState.input
+        panels.current = n
+        panels[n].node"typing_panel":start()
 		break
 	end
 end
@@ -541,7 +583,15 @@ win.scene = am.group{
 -- main game loop
 -------------------------------------------------------
 win.scene:action(function(scene)
-
+    local active_panel = get_current_panel()
+    if active_panel.game:won() or active_panel.game:lost() then
+        local next_panel = next_panel()
+        if next_panel then
+            next_panel.game:start()
+        else
+            log("Sequence complete!")
+        end
+    end
 end)
 
 
