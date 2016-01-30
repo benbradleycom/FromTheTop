@@ -54,7 +54,10 @@ function panel_typing(word, aspect_ratio, animation_state)
     local_root:tag"typing_panel":action(
 		am.series{
 			play_intro(),
-			user_input(),
+            am.parallel{
+                clear_hint(),
+                user_input(),
+            },
 		}
     )
 
@@ -71,20 +74,24 @@ function play_intro()
 
 		-- Type out word
 		for i=1, #node.word do
-			am.wait(am.delay(0.5))
+			am.wait(am.delay(0.25))
 			node.word_chars_to_show = i
 		end
-		am.wait(am.delay(0.5))
+		am.wait(am.delay(0.25))
 		node.cursor = false
-
-		-- Show word for a bit
-        -- TODO(fierydrake): Should short-cut this if the user presses a key
-		am.wait(am.delay(2))
-
-		-- Clear ready for input
-		node.word_chars_to_show = 0
-		node.cursor = true
 	end)
+end
+
+function clear_hint()
+    return am.series{
+        -- Show word for a bit
+        am.delay(1),
+        function(node)
+            -- Clear ready for input
+            node.word_chars_to_show = 0
+            node.cursor = true
+        end
+    }
 end
 
 function user_input()
