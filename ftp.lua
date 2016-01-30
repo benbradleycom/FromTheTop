@@ -14,23 +14,31 @@ win = am.window{
 }
 
 -------------------------------------------------------
+-- sound fx
+-------------------------------------------------------
+
+function pipHi() return am.play(77763306) end
+function pipLo() return am.play(96169106) end
+function bopHi() return am.play(24992902) end
+function bopLo() return am.play(99503802) end
+function snare() return am.play(20008302) end
+function swipe() return am.play(77813709) end
+function brush() return am.play(90848704) end
+
+-------------------------------------------------------
 -- drums
 -------------------------------------------------------
 
+clicky = 1
+
 function drum_panel()
 
-	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
-	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
-
+	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
-	local word_chars_shown = 0
-	local cursor = true
-	function local_root:get_word()
-		return "grr"
-	end
-
-	local local_root = am.scale(1)
+	
+	pip_color = vec4(0.2,0,0.6,1)
+	bop_color = vec4(0,0.6,0.2,1) 
 	
     function local_root:lost()
         return false
@@ -39,22 +47,57 @@ function drum_panel()
         return false
     end
 	
-    -- Behaviour
+	function bumper() return am.loop(function()
+		return am.series{
+			function(node)
+				if win:mouse_pressed"left" then
+					win.scene:action(pipHi())
+					node.scale = vec3(1.3)
+					return true
+				end
+			end,
+			am.tween(0.3,{scale = vec3(1)})
+		}
+	end)end
+	
+	pipButton = am.group
+	{
+		am.scale(1):action(bumper())
+		^ am.translate(0,-0.05)
+		^ am.scale(0.1)
+		^ am.rect(-1,-0.5,1,0.5,pip_color),
+		
+		am.scale(1):action(bumper())
+		^ am.circle(vec2(0),0.1,pip_color,8),
+	}
+	
+	bopButton = am.group
+	{
+		am.scale(1):action(bumper())
+		^ am.rotate(math.rad(45))
+		^ am.scale(0.071)
+		^ am.rect(-1,-1,1,1,bop_color),
+		
+		am.scale(1):action(bumper())
+		^ am.translate(0.05,0.05)
+		^ am.scale(0.05)
+		^ am.rect(-1,-1,1,1,bop_color),
+	}
+	
+    -- behaviour
     local actions = {}
     if show_hint then actions[#actions+1] = play_intro(); end
---[[    actions[#actions+1] = am.parallel{
-        clear_hint(),
-        user_input(),
-    }]]
+	
     local_root:tag"drum_panel":action(am.series(actions))
-
+	
 	return local_root
 		^ am.scale(100,100)
 		^ am.translate(-0.5, -0.5)
 		^ am.group {
 			am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 			am.rect(0,0,1,1, background_color),
---			am.translate(0.5, 0.5) ^ ,
+			am.translate(0.65, 0.5) ^ pipButton,
+			am.translate(0.35, 0.5) ^ bopButton,
 		}
 end
 
@@ -65,7 +108,7 @@ end
 function typing_panel(word, show_hint)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
-	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
+	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
 	local word_chars_shown = 0
@@ -290,7 +333,7 @@ function panels.AddOne(activity)
 		p.snare = true
 	end
 	
-	 -- provide nodes a getter to parent
+	-- provide nodes a getter to parent
 	function p.node:get_p() return p end
 	function scaleNode:get_p() return p end
 	
@@ -312,7 +355,7 @@ for n=1, 7 do
 end
 
 for n=1, 7 do -- demo only
-	if panels[n].activity == PanelActivity.word then
+	if panels[n].activity == PanelActivity.drums then
 		panels[n].state = PanelState.input
 		break
 	end
@@ -327,8 +370,6 @@ win.scene = am.group{
 -- main game loop
 -------------------------------------------------------
 win.scene:action(function(scene)
-
-	
 
 end)
 
