@@ -28,15 +28,7 @@ PanelState =
 
 PanelActivity =
 {
-	word = 1,
-	pattern = 2,
-	drums = 3,
-	--
-	count = 3
-}
-
-PanelDefaults =
-{
+	-- array of default table contents
 	{ -- word
 		node = am.translate(0, -25) ^ am.rect(-50, -50, 50, 50, yellow),
 		text = "dog"
@@ -49,6 +41,13 @@ PanelDefaults =
 		node = am.translate(40, -30) ^ am.rect(-50, -50, 50, 50, pink),
 		snare = true
 	},
+	
+	-- enum to array
+	word = 1,
+	pattern = 2,
+	drums = 3,
+	--
+	count = 3	
 }
 
 
@@ -77,7 +76,7 @@ function panels.AddOne(activity)
 	end
 	
 	p.activity = activity
-	table.merge( p, PanelDefaults[activity] )
+	table.merge( p, PanelActivity[activity] )
 	
 	-- last of all, add p into the table and the node to the scene table
 	panels.count = panels.count + 1
@@ -91,12 +90,9 @@ end
 -------------------------------------------------------
 
 -- test panels
-for n=1, 4 do
+for n=1, 3 do
 	panels.AddOne()
 end
-
---log( panels[1].params.scale.x )
---log( panels[1].node )
 
 win.scene = am.group() ^ panels.nodeTable
 
