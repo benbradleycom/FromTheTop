@@ -61,7 +61,7 @@ function panel_typing(word, aspect_ratio, animation_state)
 	return local_root ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 		am.rect(0,0,1,1, background_color),
-		am.translate(0.5, 0.5) ^ am.scale(1/400, 1/300) ^ am.text("_", vec4(0.9, 0.9, 0.9, 1)),
+		am.translate(0.5, 0.5) ^ am.scale(2) ^ am.scale(1/0.8) ^ am.scale(1/400, 1/300) ^ am.text("_", vec4(0.9, 0.9, 0.9, 1)),
 	}
 end
 
@@ -78,6 +78,7 @@ function play_intro()
 		node.cursor = false
 
 		-- Show word for a bit
+        -- TODO(fierydrake): Should short-cut this if the user presses a key
 		am.wait(am.delay(2))
 
 		-- Clear ready for input
@@ -117,18 +118,42 @@ function exit()
     end
 end
 
-win.scene = am.group() ^ {
-	am.scale(400, 300) ^ am.scale(0.8)
-	^ panel_typing("dog", 0.5, 0)
-}
+local dictfile = io.open("dictionary.txt")
+if dictfile then
+    local dict = {}
+    local index = 1
+    -- Read dictionary
+    for line in dictfile:lines() do
+        if line ~= "" then 
+            local match = string.match(line, "(%a%a+)%s+[nv]%.")
+            if match then
+            if match == "Aa" then log(match) end
+                dict[index] = string.lower(match)
+                index = index + 1
+            end
+        end
+    end
+    dictfile:close();
 
-win.scene:action(
-    am.series{
-        win_or_lose(),
-        exit(),
+    math.randomseed(os.time())
+    local randomword = dict[math.random(#dict)] 
+
+    -- Create scene
+    win.scene = am.group() ^ {
+        am.scale(400, 300) ^ am.scale(0.8)
+        ^ panel_typing(randomword, 0.5, 0)
     }
-)
 
+    win.scene:action(
+        am.series{
+            win_or_lose(),
+            exit(),
+        }
+    )
+else
+    log("Failed to open dictionary")
+    win:close()
+end
 --[[
             win_or_lose(),
             exit()
