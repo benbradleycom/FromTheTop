@@ -26,7 +26,6 @@ function drum_panel()
 	local local_root = am.scale(1)
 	local word_chars_shown = 0
 	local cursor = true
-	local user_text = ""
 	function local_root:get_word()
 		return "grr"
 	end
@@ -43,11 +42,11 @@ function drum_panel()
     -- Behaviour
     local actions = {}
     if show_hint then actions[#actions+1] = play_intro(); end
-    actions[#actions+1] = am.parallel{
+--[[    actions[#actions+1] = am.parallel{
         clear_hint(),
         user_input(),
-    }
-    local_root:tag"typing_panel":action(am.series(actions))
+    }]]
+    local_root:tag"drum_panel":action(am.series(actions))
 
 	return local_root
 		^ am.scale(100,100)
