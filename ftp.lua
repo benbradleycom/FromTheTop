@@ -1,15 +1,62 @@
 
-local yellow = vec4(1, 1, 0, 1)
-local orange = vec4(1, 0.5, 0, 1)
-local pink = vec4(1,0,0.5,1)
+yellow = vec4(1, 1, 0, 1)
+orange = vec4(1, 0.5, 0, 1)
+pink = vec4(1,0,0.5,1)
+shadow_offset = 0.02 -- temp?
+background_color = vec4(0.7, 0.7, 0.7, 1)
+shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
-local win = am.window{
+win = am.window{
     title = "From The Top",
     width = 1200,
-    height = 750,
+    height = 800,
     clear_color = vec4(0.3),
 }
 
+-------------------------------------------------------
+-- drums
+-------------------------------------------------------
+
+function drum_panel()
+
+	local shadow_offset = 0.02 -- temp?
+	local background_color = vec4(0.7, 0.8, 0.9, 1)
+	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
+
+	local local_root = am.scale(1)
+	local word_chars_shown = 0
+	local cursor = true
+	function local_root:get_word()
+		return "grr"
+	end
+
+	local local_root = am.scale(1)
+	
+    function local_root:lost()
+        return false
+    end
+    function local_root:won()
+        return false
+    end
+	
+    -- Behaviour
+    local actions = {}
+    if show_hint then actions[#actions+1] = play_intro(); end
+--[[    actions[#actions+1] = am.parallel{
+        clear_hint(),
+        user_input(),
+    }]]
+    local_root:tag"drum_panel":action(am.series(actions))
+
+	return local_root
+		^ am.scale(100,100)
+		^ am.translate(-0.5, -0.5)
+		^ am.group {
+			am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
+			am.rect(0,0,1,1, background_color),
+--			am.translate(0.5, 0.5) ^ ,
+		}
+end
 
 -------------------------------------------------------
 -- typing panel
@@ -165,9 +212,9 @@ panels = { count = 0, nodeTable = {} }
 function PanelScaleControl(node)
 
 	if node.p.state == PanelState.docked then
-		node.p.scale = 0.2
+		node.p.scale = 0.25
 	elseif node.p.state == PanelState.input then
-		node.p.scale = 4
+		node.p.scale = 4.5
 	end	
 	
 	node.scale = vec3(node.p.scale)
@@ -239,7 +286,7 @@ function panels.AddOne(activity)
 		scaleNode = scaleNode ^ am.rect(-50, -50, 50, 50, orange)
 		p.dots = 4
 	elseif activity == PanelActivity.drums then
-		scaleNode = scaleNode ^ am.rect(-50, -50, 50, 50, pink)
+		scaleNode = scaleNode ^ drum_panel()
 		p.snare = true
 	end
 	
@@ -271,7 +318,10 @@ for n=1, 7 do -- demo only
 	end
 end
 
-win.scene = am.group() ^ panels.nodeTable
+win.scene = am.group{
+	am.scale(4) ^ am.sprite("temp_background2.png"),
+	am.group() ^ panels.nodeTable,
+}
 
 -------------------------------------------------------
 -- main game loop
