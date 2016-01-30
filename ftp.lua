@@ -17,16 +17,19 @@ win = am.window{
 -- sound fx
 -------------------------------------------------------
 
-function pipHi() return am.play(77763306) end
-function pipLo() return am.play(96169106) end
-function bopHi() return am.play(24992902) end
-function bopLo() return am.play(99503802) end
-function snare() return am.play(20008302) end
-function swipe() return am.play(77813709) end
-function brush() return am.play(90848704) end
+sounds =
+{
+	piphi = 77763306,
+	piplo = 96169106,
+	bophi = 24992902,
+	boplo = 99503802,
+	snare = 20008302,
+	swipe = 77813709,
+	brush = 90848704,
+}
 
 -------------------------------------------------------
--- drums
+-- drum panel
 -------------------------------------------------------
 
 function drum_panel()
@@ -45,11 +48,13 @@ function drum_panel()
         return false
     end
 	
-	function bumper() return am.loop(function()
+	function bumper( soundid ) return am.loop(function()
 		return am.series{
 			function(node)
-				if win:mouse_pressed"left" then
-					win.scene:action(pipHi())
+--				if win:mouse_pressed"left" then
+if (win:mouse_pressed"left" and soundid == sounds.piphi) or
+(win:mouse_pressed"right" and soundid ~= sounds.piphi) then
+					if soundid then win.scene:action(am.play(soundid)) end
 					node.scale = vec3(1.3)
 					return true
 				end
@@ -58,9 +63,9 @@ function drum_panel()
 		}
 	end)end
 	
-	pipButton = am.group
+	piphiButton = am.group
 	{
-		am.scale(1):action(bumper())
+		am.scale(1):action(bumper(sounds.piphi))
 		^ am.translate(0,-0.05)
 		^ am.scale(0.1)
 		^ am.rect(-1,-0.5,1,0.5,pip_color),
@@ -69,18 +74,42 @@ function drum_panel()
 		^ am.circle(vec2(0),0.1,pip_color,8),
 	}
 	
-	bopButton = am.group
+	piploButton = am.group
 	{
+		am.scale(1):action(bumper(sounds.piplo))
+		^ am.translate(0,0.05)
+		^ am.scale(0.1)
+		^ am.rect(-1,-0.5,1,0.5,pip_color),
+		
 		am.scale(1):action(bumper())
+		^ am.circle(vec2(0),0.1,pip_color,8),
+	}	
+	
+	bophiButton = am.group
+	{
+		am.scale(1):action(bumper(sounds.bophi))
 		^ am.rotate(math.rad(45))
 		^ am.scale(0.071)
 		^ am.rect(-1,-1,1,1,bop_color),
 		
 		am.scale(1):action(bumper())
-		^ am.translate(0.05,0.05)
+		^ am.translate(0,-0.05)
 		^ am.scale(0.05)
 		^ am.rect(-1,-1,1,1,bop_color),
 	}
+	
+	boploButton = am.group
+	{
+		am.scale(1):action(bumper(sounds.boplo))
+		^ am.rotate(math.rad(45))
+		^ am.scale(0.071)
+		^ am.rect(-1,-1,1,1,bop_color),
+		
+		am.scale(1):action(bumper())
+		^ am.translate(0,0.05)
+		^ am.scale(0.05)
+		^ am.rect(-1,-1,1,1,bop_color),
+	}	
 	
     -- behaviour
     local actions = {}
@@ -94,8 +123,10 @@ function drum_panel()
 		^ am.group {
 			am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 			am.rect(0,0,1,1, background_color),
-			am.translate(0.65, 0.5) ^ pipButton,
-			am.translate(0.35, 0.5) ^ bopButton,
+			am.translate(0.35, 0.35) ^ am.scale(0.8) ^ piploButton,
+			am.translate(0.65, 0.35) ^ am.scale(0.8) ^ boploButton,
+			am.translate(0.35, 0.65) ^ am.scale(0.8) ^ piphiButton,
+			am.translate(0.65, 0.65) ^ am.scale(0.8) ^ bophiButton,
 		}
 end
 
@@ -564,6 +595,7 @@ end
 for n=1, 7 do
 	panels.AddOne()
 end
+panels.AddOne( PanelActivity.drums )
 
 for n=1, 7 do -- demo only
 	if panels[n].activity == PanelActivity.word then
