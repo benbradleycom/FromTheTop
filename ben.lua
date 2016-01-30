@@ -3,6 +3,7 @@
 
 local yellow = vec4(1, 1, 0, 1)
 local orange = vec4(1, 0.5, 0, 1)
+local pink = vec4(1,0,0.5,1)
 
 local win = am.window{
     title = "From The Top ~ ben's testbed",
@@ -14,10 +15,7 @@ local win = am.window{
 -------------------------------------------------------
 -- panels global array
 -------------------------------------------------------
-panels =
-{
-	count = 0;
-}
+panels = { count = 0, nodeTable = {} }
 
 PanelState =
 {
@@ -28,26 +26,63 @@ PanelState =
 	animOff = 5,
 }
 
+PanelActivity =
+{
+	word = 1,
+	pattern = 2,
+	drums = 3,
+	--
+	count = 3
+}
+
+PanelDefaults =
+{
+	{ -- word
+		node = am.translate(0, -25) ^ am.rect(-50, -50, 50, 50, yellow),
+		text = "dog"
+	},
+	{ -- pattern
+		node = am.translate(-40, -50) ^ am.rect(-50, -50, 50, 50, orange),
+		dots = 4
+	},
+	{ -- drums
+		node = am.translate(40, -30) ^ am.rect(-50, -50, 50, 50, pink),
+		snare = true
+	},
+}
+
 
 function panels.MakeEmpty()
 	for b=1, panels.count do
 		panels[b] = nil
 	end
+	panels.nodeTable = nil
 end
 
 
-function panels.AddOne()
-	panels.count = panels.count + 1
-	b =
-	{
-		-- here we define the panel table parameters
+function panels.AddOne(activity)
+	
+	local p = {}
+	p.params =
+	{	-- here we define the panel table parameters
+		-- these are used to communicate from the panel to the game level
 		-- we'll give them all default values rather than nil
-		scale = vec2(1,1);
-		position = vec2( win.width, win.height ) * 0.5;
+		scale = vec2(1,1),
+		position = vec2( win.width, win.height ) * 0.5,
 		state = docked
 	}
 	
-	panels[panels.count] = { params = b }
+	if( activity == nil or activity > PanelActivity.count ) then
+		activity = math.random(1,PanelActivity.count)
+	end
+	
+	p.activity = activity
+	table.merge( p, PanelDefaults[activity] )
+	
+	-- last of all, add p into the table and the node to the scene table
+	panels.count = panels.count + 1
+	panels[panels.count] = p
+	panels.nodeTable[panels.count] = p.node
 end
 
 
@@ -55,50 +90,20 @@ end
 -- dummy puzzle types (panel types)
 -------------------------------------------------------
 
-function MakeAsYellow()
-	return
-	{
-		node = am.translate(0, -25) ^ am.rect(-50, -50, 50, 50, yellow),
-		yellow = true
-	}
-end
-
-function MakeAsOrange()
-	return
-	{
-		node = am.translate(-40, -50) ^ am.rect(-50, -50, 50, 50, orange),
-		orange = true
-	}
-end
-
 -- test panels
 for n=1, 4 do
 	panels.AddOne()
 end
 
-table.merge( panels[1], MakeAsYellow() )
-table.merge( panels[2], MakeAsOrange() ) --todo: make as random (by default?)
-table.merge( panels[3], MakeAsOrange() )
-table.merge( panels[4], MakeAsYellow() )
-
 --log( panels[1].params.scale.x )
 --log( panels[1].node )
 
--------------------------------------------------------
--- win scene
--------------------------------------------------------
-panelmap = {}
-for pm=1, panels.count do
-	panelmap[pm] = panels[pm].node
-end
-win.scene = am.group() ^ panelmap
+win.scene = am.group() ^ panels.nodeTable
 
 -------------------------------------------------------
 -- main game loop
 -------------------------------------------------------
 win.scene:action(function(scene)
-
-
 
 end)
 
