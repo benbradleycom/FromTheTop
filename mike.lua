@@ -61,7 +61,7 @@ function typing_panel(word, show_hint)
 
 	return local_root ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
-		am.rect(0,0,1,1, background_color),
+        am.rect(0,0,1,1, background_color),
 		am.translate(0.5, 0.5) ^ am.scale(2) ^ am.scale(1/0.8) ^ am.scale(1/400, 1/300) ^ am.text("_", vec4(0.9, 0.9, 0.9, 1)),
 	}
 end
@@ -145,8 +145,9 @@ if dictfile then
 
     -- Create scene
     win.scene = am.group() ^ {
+		am.scale(4) ^ am.sprite("temp_background2.png"),
         am.scale(400, 300) ^ am.scale(0.8)
-        ^ typing_panel(randomword, false)
+        ^ typing_panel(randomword, true)
     }
 
     win.scene:action(
