@@ -5,7 +5,7 @@ local win = am.window{
 	clear_color = vec4(1, 0, 0.5, 1)
 }
 
-function render_panel_typing(word, aspect_ratio, animation_state)
+function panel_typing(word, aspect_ratio, animation_state)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
@@ -50,6 +50,14 @@ function render_panel_typing(word, aspect_ratio, animation_state)
         return (not self:lost() and #word == #user_text);
     end
 
+    -- Behaviour
+    local_root:tag"typing_panel":action(
+		am.series{
+			play_intro(),
+			user_input(),
+		}
+    )
+
 	return local_root ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 		am.rect(0,0,1,1, background_color),
@@ -90,15 +98,16 @@ function user_input()
 end
 
 function win_or_lose()
-    return function(node)
+    return function(scene_node)
+        local node = scene_node"typing_panel"
         if node:won() then
             log("YOU WON");
+            return true
         elseif node:lost() then
             log("YOU LOST");
-        else
-            log("Internal error");
+            return true
         end
-        return true
+        return false
     end
 end
 
@@ -110,17 +119,20 @@ end
 
 win.scene = am.group() ^ {
 	am.scale(400, 300) ^ am.scale(0.8)
-	^ render_panel_typing("dog", 0.5, 0):tag"typing_panel":action(
-		am.series{
-			play_intro(),
-			user_input(),
-            win_or_lose(),
-            exit()
-		}
-	)
+	^ panel_typing("dog", 0.5, 0)
 }
 
+win.scene:action(
+    am.series{
+        win_or_lose(),
+        exit(),
+    }
+)
+
 --[[
+            win_or_lose(),
+            exit()
+
 		am.loop(function(node)
 		return am.series{
 			am.tween(1, { scale = vec3(0.9, 0.9, 0.9) }), 
