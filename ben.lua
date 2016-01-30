@@ -43,27 +43,6 @@ PanelState =
 
 PanelActivity = 
 {
-	-- array of default table contents
-	{ -- word
-		node = am.scale(1):action(PanelScaleControl)
-			^ am.translate(0,0):action(PanelPosControl)
-			^ am.rect(-50, -50, 50, 50, yellow),
-		text = "dog",
-	},
-	{ -- pattern
-		node = am.scale(1):action(PanelScaleControl)
-			^ am.translate(0,0):action(PanelPosControl)
-			^ am.rect(-50, -50, 50, 50, orange),
-		dots = 4,
-	},
-	{ -- drums
-		node = am.scale(1):action(PanelScaleControl)
-			^ am.translate(0,0):action(PanelPosControl)
-			^ am.rect(-50, -50, 50, 50, pink),
-		snare = true,
-	},
-	
-	-- enum to array
 	word = 1,
 	pattern = 2,
 	drums = 3,
@@ -87,7 +66,7 @@ function panels.AddOne(activity)
 	end
 	
 	log(activity)
-	
+	 
 	local p = 
 	{	-- here we define the panel table parameters
 		-- these are used to communicate from the panel to the game level
@@ -98,7 +77,24 @@ function panels.AddOne(activity)
 		activity = activity
 	}
 	
-	table.merge( p, PanelActivity[activity] )
+	if activity == PanelActivity.word then
+		p.node = am.scale(1):action(PanelScaleControl)
+			^ am.translate(0,0):action(PanelPosControl)
+			^ am.rect(-50, -50, 50, 50, yellow)
+		p.text = "dog"
+	elseif activity == PanelActivity.pattern then
+		p.node = am.scale(1):action(PanelScaleControl)
+			^ am.translate(0,0):action(PanelPosControl)
+			^ am.rect(-50, -50, 50, 50, orange)
+		p.dots = 4
+	elseif activity == PanelActivity.drums then
+		p.node = am.scale(1):action(PanelScaleControl)
+			^ am.translate(0,0):action(PanelPosControl)
+			^ am.rect(-50, -50, 50, 50, pink)
+		p.snare = true
+	end
+	
+	
 	function p.node:get_p() return p end -- provide node a getter to parent
 	translate = p.node"translate"
 	function translate:get_p() return p end
