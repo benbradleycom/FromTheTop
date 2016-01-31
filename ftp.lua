@@ -32,7 +32,7 @@ sounds =
 -- drum panel
 -------------------------------------------------------
 
-function drum_panel()
+function drum_panel(pattern, show_hint)
 
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
@@ -40,7 +40,11 @@ function drum_panel()
     local show_hint = true
 	
 	pip_color = vec4(0.2,0,0.6,1)
-	bop_color = vec4(0,0.6,0.2,1) 
+	bop_color = vec4(0,0.6,0.2,1)
+	
+	pattern = {
+		1, 2, 2, 1, 3, 4,
+	}
 	
     function local_root:set_show_hint(v)
         show_hint = v
@@ -56,75 +60,78 @@ function drum_panel()
     function local_root:start()
     end
 	
-	function bumper( soundid ) return am.loop(function()
-		return am.series{
-			function(node)
---				if win:mouse_pressed"left" then
-if (win:mouse_pressed"left" and soundid == sounds.piphi) or
-(win:mouse_pressed"right" and soundid ~= sounds.piphi) then
-					if soundid then win.scene:action(am.play(soundid)) end
-					node.scale = vec3(1.3)
-					return true
-				end
+	local lightButton = 1.2 
+	local darkButton = 0.8
+	
+	buttons = {
+		am.scale(1) ^ am.group
+		{
+			am.translate(0,-0.05)
+			^ am.scale(0.1)
+			^ am.rect(-1,-0.5,1,0.5,pip_color*lightButton),
+			
+			am.circle(vec2(0),0.1,pip_color*lightButton,8),
+		},
+		
+		am.scale(1) ^ am.group
+		{
+			am.translate(0,0.05)
+			^ am.scale(0.1)
+			^ am.rect(-1,-0.5,1,0.5,pip_color*darkButton),
+			
+			am.circle(vec2(0),0.1,pip_color*darkButton,8),
+		},
+	
+		am.scale(1) ^ am.group
+		{
+			am.rotate(math.rad(45))
+			^ am.scale(0.071)
+			^ am.rect(-1,-1,1,1,bop_color*lightButton),
+			
+			am.translate(0,-0.05)
+			^ am.scale(0.05)
+			^ am.rect(-1,-1,1,1,bop_color*lightButton),
+		},
+	
+		am.scale(1) ^ am.group
+		{
+			am.rotate(math.rad(45))
+			^ am.scale(0.071)
+			^ am.rect(-1,-1,1,1,bop_color*darkButton),
+			
+			am.translate(0,0.05)
+			^ am.scale(0.05)
+			^ am.rect(-1,-1,1,1,bop_color*darkButton),
+		},	
+	}
+	
+	buttons[1].sound = sounds.bophi
+	buttons[2].sound = sounds.boplo
+	buttons[3].sound = sounds.piphi
+	buttons[4].sound = sounds.piplo
+	local_root.buttons = buttons
+	
+	function drum_action( root, index )
+		return am.parallel {
+			am.play(root.buttons[index].sound),
+			function()
+				root.buttons[index].scale = vec3(1.3)
+				root.buttons[index]:action(am.tween(0.3, {scale = vec3(1)} ))
+				return true
 			end,
-			am.tween(0.3,{scale = vec3(1)})
+			am.delay(0.8),
 		}
-	end)end
+	end
 	
-	piphiButton = am.group
-	{
-		am.scale(1):action(bumper(sounds.piphi))
-		^ am.translate(0,-0.05)
-		^ am.scale(0.1)
-		^ am.rect(-1,-0.5,1,0.5,pip_color),
-		
-		am.scale(1):action(bumper())
-		^ am.circle(vec2(0),0.1,pip_color,8),
-	}
+	-- behaviour
+    local actions = {}
+	-- drum hints
+	for dh=1, #pattern do
+		actions[dh] = drum_action( local_root, pattern[dh] )
+	end
 	
-	piploButton = am.group
-	{
-		am.scale(1):action(bumper(sounds.piplo))
-		^ am.translate(0,0.05)
-		^ am.scale(0.1)
-		^ am.rect(-1,-0.5,1,0.5,pip_color),
-		
-		am.scale(1):action(bumper())
-		^ am.circle(vec2(0),0.1,pip_color,8),
-	}	
-	
-	bophiButton = am.group
-	{
-		am.scale(1):action(bumper(sounds.bophi))
-		^ am.rotate(math.rad(45))
-		^ am.scale(0.071)
-		^ am.rect(-1,-1,1,1,bop_color),
-		
-		am.scale(1):action(bumper())
-		^ am.translate(0,-0.05)
-		^ am.scale(0.05)
-		^ am.rect(-1,-1,1,1,bop_color),
-	}
-	
-	boploButton = am.group
-	{
-		am.scale(1):action(bumper(sounds.boplo))
-		^ am.rotate(math.rad(45))
-		^ am.scale(0.071)
-		^ am.rect(-1,-1,1,1,bop_color),
-		
-		am.scale(1):action(bumper())
-		^ am.translate(0,0.05)
-		^ am.scale(0.05)
-		^ am.rect(-1,-1,1,1,bop_color),
-	}	
-	
-    -- behaviour
-    --local actions = {}
-    --if show_hint then actions[#actions+1] = play_intro(); end
-    --local_root:action(am.series(actions))
-	
-    local_root:tag"drum_panel"
+	local_root:tag"drum_panel":action(am.series(actions))
+	local_root.patternaction = patternaction
 	
 	return local_root
 		^ am.scale(100,100)
@@ -132,12 +139,23 @@ if (win:mouse_pressed"left" and soundid == sounds.piphi) or
 		^ am.group {
 			am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 			am.rect(0,0,1,1, background_color),
-			am.translate(0.35, 0.35) ^ am.scale(0.8) ^ piploButton,
-			am.translate(0.65, 0.35) ^ am.scale(0.8) ^ boploButton,
-			am.translate(0.35, 0.65) ^ am.scale(0.8) ^ piphiButton,
-			am.translate(0.65, 0.65) ^ am.scale(0.8) ^ bophiButton,
+			am.translate(0.3, 0.7) ^ buttons[1],
+			am.translate(0.3, 0.3) ^ buttons[2],
+			am.translate(0.7, 0.7) ^ buttons[3],
+			am.translate(0.7, 0.3) ^ buttons[4],
 		}
 end
+
+--[[ --TODO
+function drum_play_hint()
+    return coroutine.create(function()
+        local panel_node = coroutine.yield()
+        for i=1, #panel_node.pattern do
+        --   panel_node.drum_action:play_hint_drum(panel_node.pattern[i])
+            am.wait(am.delay(1))
+        end
+    end)
+end]]
 
 -------------------------------------------------------
 -- unlock pattern
@@ -343,7 +361,7 @@ function unlock_make_grid(grid_def)
             dots[#dots + 1] = am.circle(dot_pos, dot_size, dot_colour)
         end
     end
-
+	
     return am.scale(1) ^ dots
 end
 
