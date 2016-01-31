@@ -725,6 +725,11 @@ function panels.AddOne(activity)
 	p.index = #panels
 	panels.nodeTable[#panels] = p.node
     panels.nodeGroup:append(p.node)
+
+    local pos = docked_position(p.node)
+    panels.nodeGroup:prepend(am.translate(pos.x, pos.y) ^ am.scale(0.25) ^
+        {am.rect(-50,-50,50,50,vec4(0,0,0,1)),
+         am.rect(-46,-46,46,46,vec4(.4,.4,.4,1))})
     p.node.hidden = true
 end
 
