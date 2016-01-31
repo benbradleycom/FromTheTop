@@ -566,6 +566,7 @@ function panels.AddOne(activity)
 	p.index = #panels
 	panels.nodeTable[#panels] = p.node
     panels.nodeGroup:append(p.node)
+    p.node.hidden = true
 end
 
 -------------------------------------------------------
@@ -573,6 +574,7 @@ end
 -------------------------------------------------------
 function set_active_panel(panel)
     panel.state = PanelState.input
+    panel.node.hidden = false
 end
 
 function set_docked_panel(panel)
@@ -622,7 +624,15 @@ function next_panel()
     return next_panel
 end
 
-function generateSequence(panel_count)
+function first_panel()
+    panels.current = 1
+    local first_panel = get_current_panel()
+    animate_from_dock(first_panel)
+    set_active_panel(first_panel)
+    return first_panel;
+end
+
+function generate_sequence(panel_count)
     log("Clear panels")
     panels.MakeEmpty()
     for n=1, panel_count do
@@ -630,13 +640,6 @@ function generateSequence(panel_count)
         panels.AddOne()
     end
 end
-
-function startSequence()
-    local first_panel = get_current_panel()
-    set_active_panel(first_panel)
-    first_panel.game:start()
-end
-
 
 -------------------------------------------------------
 -- Animations
@@ -673,9 +676,9 @@ win.scene:action(coroutine.create(function()
     local sequence_length = 3
     while true do
         log("Generating sequence of length "..sequence_length)
-        generateSequence(sequence_length)
+        generate_sequence(sequence_length)
         log("Start sequence")
-        startSequence()
+        first_panel().game:start()
         log("Start game loop proper")
         while true do
             local active_panel = get_current_panel()
