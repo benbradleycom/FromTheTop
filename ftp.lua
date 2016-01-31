@@ -2,8 +2,7 @@
 yellow = vec4(1, 1, 0, 1)
 orange = vec4(1, 0.5, 0, 1)
 pink = vec4(1,0,0.5,1)
-shadow_offset = 0.02 -- temp?
-background_color = vec4(0.7, 0.7, 0.7, 1)
+shadow_offset = 0.03
 shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 win = am.window{
@@ -19,13 +18,15 @@ win = am.window{
 
 sounds =
 {
-	piphi = 77763306,
-	piplo = 96169106,
-	bophi = 24992902,
-	boplo = 99503802,
+	beephi = 77763306,
+	beeplo = 96169106,
+	crash = 99503802,
 	snare = 20008302,
 	swipe = 77813709,
 	brush = 90848704,
+	bad = 59595402,
+	coin = 65748300,
+	frog = 60384003,
 }
 
 -------------------------------------------------------
@@ -34,17 +35,26 @@ sounds =
 
 function drum_panel(pattern, show_hint)
 
-	local background_color = vec4(0.7, 0.8, 0.9, 1)
+	local background_color = vec4(0.8, 0.8, 0.8, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
     local show_hint = true
+	local pattern = {}
 	
-	pip_color = vec4(0.2,0,0.6,1)
-	bop_color = vec4(0,0.6,0.2,1)
+	crash_color = vec4(0.2,0,0.6,1)
+	beep_color = vec4(0,0.6,0.2,1)
+	frog_color = vec4(0.6,0,0.2,1)
+	local lightButton = 1.3
+	local darkButton = 0.8
 	
-	pattern = {
-		1, 2, 2, 1, 3, 4,
-	}
+	-- generate pattern
+	patterncount = 4--math.random(3,4)
+	if #pattern == 0 then
+		for n=1, patterncount do
+			pattern[n] = math.random(1,4)
+			log(pattern[n])
+		end
+	end
 	
     function local_root:set_show_hint(v)
         show_hint = v
@@ -56,59 +66,55 @@ function drum_panel(pattern, show_hint)
         return false
     end
     function local_root:reset()
+		pattern = {}
     end
     function local_root:start()
     end
 	
-	local lightButton = 1.2 
-	local darkButton = 0.8
-	
 	buttons = {
-		am.scale(1) ^ am.group
-		{
-			am.translate(0,-0.05)
-			^ am.scale(0.1)
-			^ am.rect(-1,-0.5,1,0.5,pip_color*lightButton),
-			
-			am.circle(vec2(0),0.1,pip_color*lightButton,8),
-		},
+		am.scale(1)
+		^ am.circle(vec2(0),0.1,frog_color*lightButton),
 		
 		am.scale(1) ^ am.group
 		{
 			am.translate(0,0.05)
 			^ am.scale(0.1)
-			^ am.rect(-1,-0.5,1,0.5,pip_color*darkButton),
+			^ am.rect(-1,-0.5,1,0.5,crash_color*darkButton),
 			
-			am.circle(vec2(0),0.1,pip_color*darkButton,8),
+			am.circle(vec2(0),0.1,crash_color*darkButton,8),
 		},
 	
 		am.scale(1) ^ am.group
 		{
 			am.rotate(math.rad(45))
 			^ am.scale(0.071)
-			^ am.rect(-1,-1,1,1,bop_color*lightButton),
+			^ am.rect(-1,-1,1,1,beep_color*lightButton),
 			
 			am.translate(0,-0.05)
 			^ am.scale(0.05)
-			^ am.rect(-1,-1,1,1,bop_color*lightButton),
+			^ am.rect(-1,-1,1,1,beep_color*lightButton),
 		},
-	
+		
 		am.scale(1) ^ am.group
 		{
 			am.rotate(math.rad(45))
 			^ am.scale(0.071)
-			^ am.rect(-1,-1,1,1,bop_color*darkButton),
+			^ am.rect(-1,-1,1,1,beep_color*darkButton),
 			
 			am.translate(0,0.05)
 			^ am.scale(0.05)
-			^ am.rect(-1,-1,1,1,bop_color*darkButton),
+			^ am.rect(-1,-1,1,1,beep_color*darkButton),
 		},	
 	}
 	
-	buttons[1].sound = sounds.bophi
-	buttons[2].sound = sounds.boplo
-	buttons[3].sound = sounds.piphi
-	buttons[4].sound = sounds.piplo
+	buttons[1].sound = sounds.frog
+	buttons[1].pos = vec2(0.3, 0.7)
+	buttons[2].sound = sounds.crash
+	buttons[2].pos = vec2(0.3, 0.3)
+	buttons[3].sound = sounds.beephi
+	buttons[3].pos = vec2(0.7, 0.7)
+	buttons[4].sound = sounds.beeplo
+	buttons[4].pos = vec2(0.7, 0.3)
 	local_root.buttons = buttons
 	
 	function drum_action( root, index )
@@ -130,6 +136,8 @@ function drum_panel(pattern, show_hint)
 		actions[dh] = drum_action( local_root, pattern[dh] )
 	end
 	
+	actions[#actions+1] = drum_user_input()
+	
 	local_root:tag"drum_panel":action(am.series(actions))
 	local_root.patternaction = patternaction
 	
@@ -139,11 +147,32 @@ function drum_panel(pattern, show_hint)
 		^ am.group {
 			am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 			am.rect(0,0,1,1, background_color),
-			am.translate(0.3, 0.7) ^ buttons[1],
-			am.translate(0.3, 0.3) ^ buttons[2],
-			am.translate(0.7, 0.7) ^ buttons[3],
-			am.translate(0.7, 0.3) ^ buttons[4],
+			am.translate(buttons[1].pos) ^ buttons[1],
+			am.translate(buttons[2].pos) ^ buttons[2],
+			am.translate(buttons[3].pos) ^ buttons[3],
+			am.translate(buttons[4].pos) ^ buttons[4],
 		}
+end
+
+function drum_user_input()
+    return function(panel_node)
+        if win:mouse_down("left") or win:mouse_down("right") then
+		
+            local window_mousepos = win:mouse_position()
+            local mousepos = vec2(
+                window_mousepos.x / 450 + 0.5,
+                window_mousepos.y / 450 + 0.5
+            )
+			
+			local hit_radius = 0.15
+            for b=1, #panel_node.buttons do
+				pos = panel_node.buttons[b].pos
+				if math.length(pos - mousepos) < hit_radius then
+					log(b)
+				end
+			end
+        end
+    end
 end
 
 --[[ --TODO
@@ -222,7 +251,7 @@ end
 
 function unlock_panel(pattern, grid_size_x, grid_size_y)
 	local shadow_offset = 0.02 -- temp?
-	local background_color = vec4(0.7, 0.7, 0.7, 1)
+	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
     local grid_def = { dx = 0.15, dy = 0.15, size_x = grid_size_x, size_y = grid_size_y }
 
@@ -427,7 +456,7 @@ end
 
 function typing_panel(word)
 	local shadow_offset = 0.02 -- temp?
-	local background_color = vec4(0.7, 0.7, 0.7, 1)
+	local background_color = vec4(0.9, 0.85, 0.7, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
@@ -614,7 +643,7 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 2, -- TODO put back to 3
+	count = 3,
 }
 
 function panels.MakeEmpty()
@@ -741,10 +770,10 @@ end
 function generate_sequence(panel_count)
     log("Clear panels")
     panels.MakeEmpty()
-    for n=1, panel_count do
+ --   for n=1, panel_count do
         log("Add panel")
-        panels.AddOne()
-    end
+        panels.AddOne(3)--BEN TEST
+ --   end
 end
 
 -------------------------------------------------------
