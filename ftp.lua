@@ -473,6 +473,7 @@ else
 end
 
 panels = { current = 1, so_far = 0, count = 0, nodeTable = {}, nodeGroup = am.group() }
+messageGroup = am.group()
 
 function PanelScaleControl(node)
 
@@ -629,6 +630,7 @@ function first_panel()
     local first_panel = get_current_panel()
     animate_from_dock(first_panel)
     set_active_panel(first_panel)
+    message("New sequence!")
     return first_panel;
 end
 
@@ -659,12 +661,43 @@ function flash_border(panel, colour)
     }
 end
 
+function message(text, delay)
+    if not delay then delay = 2 end
+    log("Show message "..text.." for "..delay.." seconds")
+    local messageNode = am.translate(0,100):tag"t" ^ am.scale(0):tag"s" ^ 
+        am.group(
+            am.rect(-200, -10, 200, 10, vec4(0,0,0,1)), 
+            am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
+        )
+    messageNode:action(am.series{
+        am.parallel{
+            am.tween(messageNode"s", 0.25, { scale = vec3(2) }, am.ease.out(am.ease.quadratic)),
+            am.tween(messageNode"t", 0.1, { position2d = vec2(0, 0) }, am.ease.out(am.ease.quadratic)),
+        },
+        am.delay(delay),
+        am.parallel{
+            am.tween(messageNode"s", 0.25, { scale = vec3(0) }, am.ease.quadratic),
+            am.series{
+                am.delay(0.15),
+                am.tween(messageNode"t", 0.1, { position2d = vec2(0, 100) }, am.ease.quadratic),
+            },
+        },
+        am.tween(0.25, { scale = vec3(0) }, am.ease.quadratic),
+        function()
+            log("Remove message")
+            messageGroup:remove(messageNode)
+        end,
+    })
+    messageGroup:append(messageNode)
+end
+
 -------------------------------------------------------
 -- Game control
 -------------------------------------------------------
 win.scene = am.group{
 	am.scale(4) ^ am.sprite("temp_background2.png"),
 	am.group() ^ panels.nodeGroup,
+    am.translate(0, 250) ^ messageGroup
 }
 
 -------------------------------------------------------
@@ -686,7 +719,7 @@ win.scene:action(coroutine.create(function()
                 am.wait(flash_border(active_panel, vec4(0, 1, 0, 1)))
 
                 if panels.so_far < panels.current then
-                log("NEW PANEL DONE, Panels sofar ".. panels.so_far..", current "..panels.current)
+                    log("NEW PANEL DONE, Panels sofar ".. panels.so_far..", current "..panels.current)
                     -- completed new panel!
                     panels.so_far = panels.current
                     active_panel.game.show_hint = false
