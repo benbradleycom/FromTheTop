@@ -37,15 +37,23 @@ function drum_panel()
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
+    local show_hint = true
 	
 	pip_color = vec4(0.2,0,0.6,1)
 	bop_color = vec4(0,0.6,0.2,1) 
 	
+    function local_root:set_show_hint(v)
+        show_hint = v
+    end
     function local_root:lost()
         return false
     end
     function local_root:won()
         return false
+    end
+    function local_root:reset()
+    end
+    function local_root:start()
     end
 	
 	function bumper( soundid ) return am.loop(function()
@@ -112,10 +120,11 @@ if (win:mouse_pressed"left" and soundid == sounds.piphi) or
 	}	
 	
     -- behaviour
-    local actions = {}
-    if show_hint then actions[#actions+1] = play_intro(); end
+    --local actions = {}
+    --if show_hint then actions[#actions+1] = play_intro(); end
+    --local_root:action(am.series(actions))
 	
-    local_root:tag"drum_panel":action(am.series(actions))
+    local_root:tag"drum_panel"
 	
 	return local_root
 		^ am.scale(100,100)
@@ -136,13 +145,17 @@ end
 
 test_pattern = {{0,0}, {1,1}, {1,2}, {1,3}, {2,3}, {3,3}, {3,2}}
 
-function unlock_panel(pattern, show_hint)
+function unlock_panel(pattern)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
     grid_def = { dx = 0.15, dy = 0.15, size_x = 4, size_y = 4 }
 
     local local_root = am.scale(1)
+    local show_hint = true
+    function local_root:set_show_hint(v)
+        show_hint = v
+    end
 
     local hint_nodes = am.scale(1)
     local hint_xys = {}
@@ -198,6 +211,10 @@ function unlock_panel(pattern, show_hint)
     end
     function local_root:won()
         return (not self:lost() and #user_xys == #pattern);
+    end
+    function local_root:reset()
+        user_xys = {}
+        user_nodes:remove_all()
     end
     function local_root:start()
         local actions = {}
@@ -321,15 +338,19 @@ end
 -- typing panel
 -------------------------------------------------------
 
-function typing_panel(word, show_hint)
+function typing_panel(word)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
+    local show_hint = true
 	local word_chars_shown = 0
 	local cursor = true
 	local user_text = ""
+    function local_root:set_show_hint(v)
+        show_hint = v
+    end
 	function local_root:get_word()
 		return word
 	end
@@ -365,7 +386,11 @@ function typing_panel(word, show_hint)
     function local_root:won()
         return (not self:lost() and #word == #user_text);
     end
+    function local_root:reset()
+        user_text = ""
+    end
     function local_root:start()
+        log("Starting typing with hints = " .. tostring(show_hint))
         local actions = {}
         if show_hint then actions[#actions+1] = typing_play_hint(); end
         actions[#actions+1] = am.parallel{
@@ -421,16 +446,18 @@ function typing_user_input()
 	end
 end
 
+-------------------------------------------------------
+-- panels global array
+-------------------------------------------------------
+dict = {}
 local dictfile = io.open("dictionary.txt")
 if dictfile then
-    local dict = {}
     local index = 1
     -- Read dictionary
     for line in dictfile:lines() do
         if line ~= "" then 
             local match = string.match(line, "(%a%a+)%s+[nv]%.")
             if match then
-            if match == "Aa" then log(match) end
                 dict[index] = string.lower(match)
                 index = index + 1
             end
@@ -439,16 +466,13 @@ if dictfile then
     dictfile:close();
 
     math.randomseed(os.time())
-    randomword = dict[math.random(#dict)] 
+    math.random() -- without this, the first math.random(x,y) is always the same!
 else
     log("Failed to open dictionary")
     win:close()
 end
 
--------------------------------------------------------
--- panels global array
--------------------------------------------------------
-panels = { current = 0, nodeTable = {} }
+panels = { current = 1, so_far = 0, nodeTable = {} }
 
 function PanelScaleControl(node)
 
@@ -488,7 +512,7 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 2, -- FIXME: disabled drums for testing
+	count = 3,
 }
 
 
@@ -521,9 +545,10 @@ function panels.AddOne(activity)
 	scaleNode = p.node"scale"
 	
 	if activity == PanelActivity.word then
-        p.game = typing_panel(randomword, true)
+        local randomword = dict[math.random(#dict)] 
+        p.game = typing_panel(randomword)
 	elseif activity == PanelActivity.pattern then
-        p.game = unlock_panel(test_pattern, true)
+        p.game = unlock_panel(test_pattern)
 	elseif activity == PanelActivity.drums then
         p.game = drum_panel()
 	end
@@ -566,6 +591,18 @@ function get_next_panel()
     end
 end
 
+function rewind_to_first_panel()
+    local current_panel = get_current_panel()
+    animate_to_dock(current_panel)
+    set_docked_panel(current_panel)
+
+    panels.current = 1
+    local first_panel = get_current_panel()
+    animate_from_dock(first_panel)
+    set_active_panel(first_panel)
+    return first_panel
+end
+
 function next_panel()
     local current_panel = get_current_panel()
     animate_to_dock(current_panel)
@@ -590,42 +627,66 @@ end
 -------------------------------------------------------
 -- dummy puzzle types (panel types)
 -------------------------------------------------------
-
 -- test panels
 for n=1, 7 do
 	panels.AddOne()
 end
 panels.AddOne( PanelActivity.drums )
 
-for n=1, 7 do -- demo only
-	if panels[n].activity == PanelActivity.word then
-		panels[n].state = PanelState.input
-        panels.current = n
-        panels[n].node"typing_panel":start()
-		break
-	end
-end
+local first_panel = get_current_panel()
+set_active_panel(first_panel)
+first_panel.game:start()
 
 win.scene = am.group{
 	am.scale(4) ^ am.sprite("temp_background2.png"),
 	am.group() ^ panels.nodeTable,
 }
 
+function flash_border(panel, colour)
+    local target = panel.game"rect"
+    local original_colour = target.color
+    return am.series{
+        am.tween(target, 0.25, {color = colour}, am.ease.quadratic),
+        am.tween(target, 0.5, {color = original_colour}, am.ease.quadratic), 
+    }
+end
+
 -------------------------------------------------------
 -- main game loop
 -------------------------------------------------------
-win.scene:action(function(scene)
-    local active_panel = get_current_panel()
-    if active_panel.game:won() or active_panel.game:lost() then
-        local next_panel = next_panel()
-        if next_panel then
-            next_panel.game:start()
+-- Sequence 1*, 2* - FROM THE TOP: 1, 2, 3* -- FROM THE TOP: 1, 2, 3, 4*
+--
+win.scene:action(coroutine.create(function()
+    while true do
+        local active_panel = get_current_panel()
+        if active_panel.game:won() then
+            am.wait(flash_border(active_panel, vec4(0, 1, 0, 1)))
+
+            if panels.so_far < panels.current then
+            log("NEW PANEL DONE, Panels sofar ".. panels.so_far..", current "..panels.current)
+                -- completed new panel!
+                panels.so_far = panels.current
+                active_panel.game.show_hint = false
+                local next_panel = rewind_to_first_panel()
+                next_panel.game:reset()
+                next_panel.game:start()
+            else
+            log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
+                -- completed panel
+                local next_panel = next_panel()
+                if next_panel then
+                    next_panel.game:reset()
+                    next_panel.game:start()
+                else
+                    log("Sequence won!")
+                end
+            end
+        elseif active_panel.game:lost() then
+            am.wait(flash_border(active_panel, vec4(1, 0, 0, 1)))
+            log("Sequence failed!")
         else
-            log("Sequence complete!")
+            coroutine.yield(false)
         end
     end
-end)
-
-
-
+end))
 
