@@ -32,11 +32,12 @@ sounds =
 -- drum panel
 -------------------------------------------------------
 
-function drum_panel()
+function drum_panel(pattern, show_hint)
 
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
+	nextdrum = 99503802
 	
 	pip_color = vec4(0.2,0,0.6,1)
 	bop_color = vec4(0,0.6,0.2,1) 
@@ -47,14 +48,15 @@ function drum_panel()
     function local_root:won()
         return false
     end
+	function local_root:get_pattern()
+        return pattern
+    end
 	
-	function bumper( soundid ) return am.loop(function()
+	function bumper( soundid, plays ) return am.loop(function()
 		return am.series{
 			function(node)
---				if win:mouse_pressed"left" then
-if (win:mouse_pressed"left" and soundid == sounds.piphi) or
-(win:mouse_pressed"right" and soundid ~= sounds.piphi) then
-					if soundid then win.scene:action(am.play(soundid)) end
+				if nextdrum == soundid then
+					if plays then win.scene:action(am.play(soundid)) end
 					node.scale = vec3(1.3)
 					return true
 				end
@@ -63,53 +65,56 @@ if (win:mouse_pressed"left" and soundid == sounds.piphi) or
 		}
 	end)end
 	
+	lightButton = 1.2
+	darkButton = 0.8
+	
 	piphiButton = am.group
 	{
-		am.scale(1):action(bumper(sounds.piphi))
+		am.scale(1):action(bumper(sounds.piphi,true))
 		^ am.translate(0,-0.05)
 		^ am.scale(0.1)
-		^ am.rect(-1,-0.5,1,0.5,pip_color),
+		^ am.rect(-1,-0.5,1,0.5,pip_color*lightButton),
 		
-		am.scale(1):action(bumper())
-		^ am.circle(vec2(0),0.1,pip_color,8),
+		am.scale(1):action(bumper(sounds.piphi))
+		^ am.circle(vec2(0),0.1,pip_color*lightButton,8),
 	}
 	
 	piploButton = am.group
 	{
-		am.scale(1):action(bumper(sounds.piplo))
+		am.scale(1):action(bumper(sounds.piplo,true))
 		^ am.translate(0,0.05)
 		^ am.scale(0.1)
-		^ am.rect(-1,-0.5,1,0.5,pip_color),
+		^ am.rect(-1,-0.5,1,0.5,pip_color*darkButton),
 		
-		am.scale(1):action(bumper())
-		^ am.circle(vec2(0),0.1,pip_color,8),
+		am.scale(1):action(bumper(sounds.piplo))
+		^ am.circle(vec2(0),0.1,pip_color*darkButton,8),
 	}	
 	
 	bophiButton = am.group
 	{
-		am.scale(1):action(bumper(sounds.bophi))
+		am.scale(1):action(bumper(sounds.bophi,true))
 		^ am.rotate(math.rad(45))
 		^ am.scale(0.071)
-		^ am.rect(-1,-1,1,1,bop_color),
+		^ am.rect(-1,-1,1,1,bop_color*lightButton),
 		
-		am.scale(1):action(bumper())
+		am.scale(1):action(bumper(sounds.bophi))
 		^ am.translate(0,-0.05)
 		^ am.scale(0.05)
-		^ am.rect(-1,-1,1,1,bop_color),
+		^ am.rect(-1,-1,1,1,bop_color*lightButton),
 	}
 	
 	boploButton = am.group
 	{
-		am.scale(1):action(bumper(sounds.boplo))
+		am.scale(1):action(bumper(sounds.boplo,true))
 		^ am.rotate(math.rad(45))
 		^ am.scale(0.071)
-		^ am.rect(-1,-1,1,1,bop_color),
+		^ am.rect(-1,-1,1,1,bop_color*darkButton),
 		
-		am.scale(1):action(bumper())
+		am.scale(1):action(bumper(sounds.boplo))
 		^ am.translate(0,0.05)
 		^ am.scale(0.05)
-		^ am.rect(-1,-1,1,1,bop_color),
-	}	
+		^ am.rect(-1,-1,1,1,bop_color*darkButton),
+	}
 	
     -- behaviour
     local actions = {}
