@@ -606,6 +606,21 @@ messageGroup = am.group()
 promptGroup = am.group()
 stampGroup = am.group()
 
+function docked_position(node)
+    return vec3(-550 + (node.p.index * 40), 320, 0)
+end
+
+function docked_scale(node)
+    return 0.25
+end
+
+function input_position(node)
+    return vec3(0)
+end
+function input_scale(node)
+    return 4.5
+end
+
 function PanelScaleControl(node)
 
 	if node.p.state == PanelState.docked then
@@ -710,7 +725,6 @@ end
 -------------------------------------------------------
 function set_active_panel(panel)
     panel.state = PanelState.input
-    panel.node.hidden = false
 end
 
 function set_docked_panel(panel)
@@ -735,26 +749,28 @@ end
 
 function rewind_to_first_panel()
     local current_panel = get_current_panel()
-    animate_to_dock(current_panel)
+    am.wait(animate_to_dock(current_panel))
     set_docked_panel(current_panel)
 
     panels.current = 1
     local first_panel = get_current_panel()
-    animate_from_dock(first_panel)
+    am.wait(animate_from_dock(first_panel))
     set_active_panel(first_panel)
     return first_panel
 end
 
 function advance_panel()
     local current_panel = get_current_panel()
-    animate_to_dock(current_panel)
+    am.wait(animate_to_dock(current_panel))
     set_docked_panel(current_panel)
 
     local next_panel = nil
     if more_panels() then
         panels.current = panels.current + 1
         next_panel = get_current_panel()
-        animate_from_dock(next_panel)
+        next_panel.node.hidden = false
+        coroutine.yield(false)
+        am.wait(animate_from_dock(next_panel))
         set_active_panel(next_panel)
     end
     return next_panel
@@ -763,7 +779,9 @@ end
 function first_panel()
     panels.current = 1
     local first_panel = get_current_panel()
-    animate_from_dock(first_panel)
+    first_panel.node.hidden = false
+    coroutine.yield(false)
+    am.wait(animate_from_dock(first_panel))
     set_active_panel(first_panel)
     return first_panel;
 end
@@ -781,9 +799,26 @@ end
 -- Animations
 -------------------------------------------------------
 function animate_to_dock(panel)
+    return am.series{
+        function() panel.state = PanelState.animOn; return true end,
+        am.parallel{
+            am.tween(panel.node.p, 1, { scale = docked_scale(panel.node) }),
+            am.tween(panel.node.p, 1, { pos = docked_position(panel.node) }),
+        },
+        function() panel.state = PanelState.docked; return true end,
+    }
 end
 
 function animate_from_dock(panel)
+    log("From dock " .. tostring(panel))
+    return am.series{
+        function() panel.state = PanelState.animOff; return true end,
+        am.parallel{
+            am.tween(panel.node.p, 1, { scale = input_scale(panel.node) }),
+            am.tween(panel.node.p, 1, { pos = input_position(panel.node) }),
+        },
+        function() panel.state = PanelState.input; return true end,
+    }
 end
 
 function flash_border(panel, colour)
@@ -960,14 +995,13 @@ win.scene:action(coroutine.create(function()
                     am.wait(am.delay(1))
                     clear_message()
                     local next_panel = rewind_to_first_panel()
-                    next_panel.game:reset()
+                    active_panel.game:reset()
                     next_panel.game:start()
                 else
                     log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
                     -- completed panel
                     local next_panel = get_next_panel()
                     if next_panel then
-                        next_panel.game:reset()
                         if panels.so_far < next_panel.index then
                             -- starting a new panel
                             am.wait(win_stamp())
@@ -980,6 +1014,7 @@ win.scene:action(coroutine.create(function()
                         else
                             advance_panel()
                         end
+                        active_panel.game:reset()
                         next_panel.game:start()
                     else
                         log("Sequence won!")
