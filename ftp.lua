@@ -472,7 +472,7 @@ else
     win:close()
 end
 
-panels = { current = 1, so_far = 0, nodeTable = {} }
+panels = { current = 1, so_far = 0, count = 0, nodeTable = {}, nodeGroup = am.group() }
 
 function PanelScaleControl(node)
 
@@ -512,15 +512,18 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 3,
+	count = 2, -- TODO put back to 3
 }
 
-
 function panels.MakeEmpty()
+    panels.current = 1
+    panels.so_far = 0
+    panels.count = 0
 	for b=1, #panels do
 		panels[b] = nil
+        panels.nodeTable[b] = nil
 	end
-	panels.nodeTable = nil
+    panels.nodeGroup:remove_all()
 end
 
 
@@ -562,6 +565,7 @@ function panels.AddOne(activity)
 	panels[#panels + 1] = p
 	p.index = #panels
 	panels.nodeTable[#panels] = p.node
+    panels.nodeGroup:append(p.node)
 end
 
 -------------------------------------------------------
@@ -618,29 +622,30 @@ function next_panel()
     return next_panel
 end
 
+function generateSequence(panel_count)
+    log("Clear panels")
+    panels.MakeEmpty()
+    for n=1, panel_count do
+        log("Add panel")
+        panels.AddOne()
+    end
+end
+
+function startSequence()
+    local first_panel = get_current_panel()
+    set_active_panel(first_panel)
+    first_panel.game:start()
+end
+
+
+-------------------------------------------------------
+-- Animations
+-------------------------------------------------------
 function animate_to_dock(panel)
 end
 
 function animate_from_dock(panel)
 end
-
--------------------------------------------------------
--- dummy puzzle types (panel types)
--------------------------------------------------------
--- test panels
-for n=1, 7 do
-	panels.AddOne()
-end
-panels.AddOne( PanelActivity.drums )
-
-local first_panel = get_current_panel()
-set_active_panel(first_panel)
-first_panel.game:start()
-
-win.scene = am.group{
-	am.scale(4) ^ am.sprite("temp_background2.png"),
-	am.group() ^ panels.nodeTable,
-}
 
 function flash_border(panel, colour)
     local target = panel.game"rect"
@@ -652,41 +657,63 @@ function flash_border(panel, colour)
 end
 
 -------------------------------------------------------
+-- Game control
+-------------------------------------------------------
+win.scene = am.group{
+	am.scale(4) ^ am.sprite("temp_background2.png"),
+	am.group() ^ panels.nodeGroup,
+}
+
+-------------------------------------------------------
 -- main game loop
 -------------------------------------------------------
 -- Sequence 1*, 2* - FROM THE TOP: 1, 2, 3* -- FROM THE TOP: 1, 2, 3, 4*
 --
 win.scene:action(coroutine.create(function()
+    local sequence_length = 3
     while true do
-        local active_panel = get_current_panel()
-        if active_panel.game:won() then
-            am.wait(flash_border(active_panel, vec4(0, 1, 0, 1)))
+        log("Generating sequence of length "..sequence_length)
+        generateSequence(sequence_length)
+        log("Start sequence")
+        startSequence()
+        log("Start game loop proper")
+        while true do
+            local active_panel = get_current_panel()
+            if active_panel.game:won() then
+                am.wait(flash_border(active_panel, vec4(0, 1, 0, 1)))
 
-            if panels.so_far < panels.current then
-            log("NEW PANEL DONE, Panels sofar ".. panels.so_far..", current "..panels.current)
-                -- completed new panel!
-                panels.so_far = panels.current
-                active_panel.game.show_hint = false
-                local next_panel = rewind_to_first_panel()
-                next_panel.game:reset()
-                next_panel.game:start()
-            else
-            log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
-                -- completed panel
-                local next_panel = next_panel()
-                if next_panel then
+                if panels.so_far < panels.current then
+                log("NEW PANEL DONE, Panels sofar ".. panels.so_far..", current "..panels.current)
+                    -- completed new panel!
+                    panels.so_far = panels.current
+                    active_panel.game.show_hint = false
+                    local next_panel = rewind_to_first_panel()
                     next_panel.game:reset()
                     next_panel.game:start()
                 else
-                    log("Sequence won!")
+                log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
+                    -- completed panel
+                    local next_panel = next_panel()
+                    if next_panel then
+                        next_panel.game:reset()
+                        next_panel.game:start()
+                    else
+                        log("Sequence won!")
+                        sequence_length = sequence_length + 1
+                        break
+                    end
                 end
+            elseif active_panel.game:lost() then
+                am.wait(flash_border(active_panel, vec4(1, 0, 0, 1)))
+                log("Sequence failed!")
+                -- show failure screen
+                -- wait for restart
+                sequence_length = 3
+                break
+            else
+                -- Nothing to do, yield for next frame
+                coroutine.yield(false)
             end
-        elseif active_panel.game:lost() then
-            am.wait(flash_border(active_panel, vec4(1, 0, 0, 1)))
-            log("Sequence failed!")
-        else
-            coroutine.yield(false)
         end
     end
 end))
-
