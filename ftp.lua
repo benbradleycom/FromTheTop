@@ -687,7 +687,6 @@ function panels.AddOne(activity)
 	if( activity == nil or activity > PanelActivity.count ) then
 		activity = math.random(1,PanelActivity.count)
 	end
-	activity = 3
 	
 	local p =
 	{	-- here we define the panel table parameters
