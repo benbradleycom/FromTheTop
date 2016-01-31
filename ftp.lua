@@ -42,7 +42,7 @@ function drum_panel(pattern, show_hint)
 	bop_color = vec4(0,0.6,0.2,1)
 	
 	pattern = {
-		1, 2, 2, 1,
+		1, 2, 2, 1, 3, 4,
 	}
 	
     function local_root:lost()
@@ -55,93 +55,77 @@ function drum_panel(pattern, show_hint)
         return pattern
     end
 	
-	function bumper( soundid, plays ) return am.loop(function()
-		return am.series{
-			function(node)
-				if nextdrum == soundid then
-					win.scene:action(am.play(soundid))
-					
-					return true
-				end
-			end,
-			am.tween(0.3,{scale = vec3(1)})
-		}
-	end)end
-	
 	local lightButton = 1.2 
 	local darkButton = 0.8
 	
-	local_root.piphiButton = am.scale(1) ^ am.group
-	{
-		am.translate(0,-0.05)
-		^ am.scale(0.1)
-		^ am.rect(-1,-0.5,1,0.5,pip_color*lightButton),
+	buttons = {
+		am.scale(1) ^ am.group
+		{
+			am.translate(0,-0.05)
+			^ am.scale(0.1)
+			^ am.rect(-1,-0.5,1,0.5,pip_color*lightButton),
+			
+			am.circle(vec2(0),0.1,pip_color*lightButton,8),
+		},
 		
-		am.circle(vec2(0),0.1,pip_color*lightButton,8),
+		am.scale(1) ^ am.group
+		{
+			am.translate(0,0.05)
+			^ am.scale(0.1)
+			^ am.rect(-1,-0.5,1,0.5,pip_color*darkButton),
+			
+			am.circle(vec2(0),0.1,pip_color*darkButton,8),
+		},
+	
+		am.scale(1) ^ am.group
+		{
+			am.rotate(math.rad(45))
+			^ am.scale(0.071)
+			^ am.rect(-1,-1,1,1,bop_color*lightButton),
+			
+			am.translate(0,-0.05)
+			^ am.scale(0.05)
+			^ am.rect(-1,-1,1,1,bop_color*lightButton),
+		},
+	
+		am.scale(1) ^ am.group
+		{
+			am.rotate(math.rad(45))
+			^ am.scale(0.071)
+			^ am.rect(-1,-1,1,1,bop_color*darkButton),
+			
+			am.translate(0,0.05)
+			^ am.scale(0.05)
+			^ am.rect(-1,-1,1,1,bop_color*darkButton),
+		},	
 	}
 	
-	local_root.piploButton = am.scale(1) ^ am.group
-	{
-		am.translate(0,0.05)
-		^ am.scale(0.1)
-		^ am.rect(-1,-0.5,1,0.5,pip_color*darkButton),
-		
-		am.circle(vec2(0),0.1,pip_color*darkButton,8),
-	}
+	buttons[1].sound = sounds.bophi
+	buttons[2].sound = sounds.boplo
+	buttons[3].sound = sounds.piphi
+	buttons[4].sound = sounds.piplo
+	local_root.buttons = buttons
 	
-	local_root.bophiButton = am.scale(1) ^ am.group
-	{
-		am.rotate(math.rad(45))
-		^ am.scale(0.071)
-		^ am.rect(-1,-1,1,1,bop_color*lightButton),
-		
-		am.translate(0,-0.05)
-		^ am.scale(0.05)
-		^ am.rect(-1,-1,1,1,bop_color*lightButton),
-	}
-	
-	local_root.boploButton = am.scale(1) ^ am.group
-	{
-		am.rotate(math.rad(45))
-		^ am.scale(0.071)
-		^ am.rect(-1,-1,1,1,bop_color*darkButton),
-		
-		am.translate(0,0.05)
-		^ am.scale(0.05)
-		^ am.rect(-1,-1,1,1,bop_color*darkButton),
-	}
-	
-	drum_actions =
-	{
-		function(root) return am.parallel {
-			am.play(sounds.piphi),
+	function drum_action( root, index )
+		return am.parallel {
+			am.play(root.buttons[index].sound),
 			function()
-				root.piphiButton.scale = vec3(1.3)
-				root.piphiButton:action(am.tween(0.3, {scale = vec3(1)} ))
+				root.buttons[index].scale = vec3(1.3)
+				root.buttons[index]:action(am.tween(0.3, {scale = vec3(1)} ))
 				return true
 			end,
 			am.delay(0.8),
-		} end,
-		
-		function(root) return am.parallel {
-			am.play(sounds.piplo),
-			function()
-				root.piploButton.scale = vec3(1.3)
-				root.piploButton:action(am.tween(0.3, {scale = vec3(1)} ))
-				return true
-			end,
-			am.delay(0.8),
-		} end,
-	}	
+		}
+	end
 	
-    -- behaviour
+	-- behaviour
     local actions = {}
 	-- drum hints
 	for dh=1, #pattern do
-		actions[dh] = drum_actions[ pattern[dh] ](local_root)
+		actions[dh] = drum_action( local_root, pattern[dh] )
 	end
 	
-    local_root:tag"drum_panel":action(am.series(actions))
+	local_root:tag"drum_panel":action(am.series(actions))
 	local_root.patternaction = patternaction
 	
 	return local_root
@@ -150,10 +134,10 @@ function drum_panel(pattern, show_hint)
 		^ am.group {
 			am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 			am.rect(0,0,1,1, background_color),
-			am.translate(0.35, 0.35) ^ am.scale(0.8) ^ local_root.piploButton,
-			am.translate(0.65, 0.35) ^ am.scale(0.8) ^ local_root.boploButton,
-			am.translate(0.35, 0.65) ^ am.scale(0.8) ^ local_root.piphiButton,
-			am.translate(0.65, 0.65) ^ am.scale(0.8) ^ local_root.bophiButton,
+			am.translate(0.3, 0.7) ^ buttons[1],
+			am.translate(0.3, 0.3) ^ buttons[2],
+			am.translate(0.7, 0.7) ^ buttons[3],
+			am.translate(0.7, 0.3) ^ buttons[4],
 		}
 end
 
