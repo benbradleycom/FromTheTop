@@ -643,7 +643,7 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 3,
+	count = 2,
 }
 
 function panels.MakeEmpty()
@@ -770,10 +770,10 @@ end
 function generate_sequence(panel_count)
     log("Clear panels")
     panels.MakeEmpty()
- --   for n=1, panel_count do
+    for n=1, panel_count do
         log("Add panel")
-        panels.AddOne(3)--BEN TEST
- --   end
+        panels.AddOne()
+    end
 end
 
 -------------------------------------------------------
