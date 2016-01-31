@@ -37,6 +37,7 @@ function drum_panel(pattern, show_hint)
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
+    local show_hint = true
 	
 	pip_color = vec4(0.2,0,0.6,1)
 	bop_color = vec4(0,0.6,0.2,1)
@@ -45,14 +46,18 @@ function drum_panel(pattern, show_hint)
 		1, 2, 2, 1, 3, 4,
 	}
 	
+    function local_root:set_show_hint(v)
+        show_hint = v
+    end
     function local_root:lost()
         return false
     end
     function local_root:won()
         return false
     end
-	function local_root:get_pattern()
-        return pattern
+    function local_root:reset()
+    end
+    function local_root:start()
     end
 	
 	local lightButton = 1.2 
@@ -158,13 +163,17 @@ end]]
 
 test_pattern = {{0,0}, {1,1}, {1,2}, {1,3}, {2,3}, {3,3}, {3,2}}
 
-function unlock_panel(pattern, show_hint)
+function unlock_panel(pattern)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
     grid_def = { dx = 0.15, dy = 0.15, size_x = 4, size_y = 4 }
 
     local local_root = am.scale(1)
+    local show_hint = true
+    function local_root:set_show_hint(v)
+        show_hint = v
+    end
 
     local hint_nodes = am.scale(1)
     local hint_xys = {}
@@ -221,17 +230,21 @@ function unlock_panel(pattern, show_hint)
     function local_root:won()
         return (not self:lost() and #user_xys == #pattern);
     end
+    function local_root:reset()
+        user_xys = {}
+        user_nodes:remove_all()
+    end
+    function local_root:start()
+        local actions = {}
+        if show_hint then actions[#actions+1] = unlock_play_hint(); end
+        actions[#actions+1] = am.parallel{
+            unlock_clear_hint(),
+            unlock_user_input(),
+        }
+        self:action(am.series(actions))
+    end
 
-    -- Behaviour
-    local actions = {}
-    if show_hint then actions[#actions+1] = unlock_play_hint(); end
-    actions[#actions+1] = am.parallel{
-        unlock_clear_hint(),
-        unlock_user_input(),
-    }
-    local_root:tag"unlock_panel":action(am.series(actions))
-
-	return local_root ^ am.scale(100,100) ^ {
+	return local_root:tag"unlock_panel" ^ am.scale(100,100) ^ {
         am.translate(-0.5, -0.5) ^ {
     		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
             am.rect(0,0,1,1, background_color),
@@ -321,8 +334,8 @@ function unlock_user_input()
             local window_mousepos = win:mouse_position()
             -- hack in the transformation into the panel coordinate space
             local mousepos = vec2(
-                window_mousepos.x / 100,
-                window_mousepos.y / 100
+                window_mousepos.x / 450,
+                window_mousepos.y / 450
             )
             local hit_radius = 0.05
             local grid_def = panel_node.grid_def
@@ -343,15 +356,19 @@ end
 -- typing panel
 -------------------------------------------------------
 
-function typing_panel(word, show_hint)
+function typing_panel(word)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
+    local show_hint = true
 	local word_chars_shown = 0
 	local cursor = true
 	local user_text = ""
+    function local_root:set_show_hint(v)
+        show_hint = v
+    end
 	function local_root:get_word()
 		return word
 	end
@@ -387,15 +404,21 @@ function typing_panel(word, show_hint)
     function local_root:won()
         return (not self:lost() and #word == #user_text);
     end
+    function local_root:reset()
+        user_text = ""
+    end
+    function local_root:start()
+        log("Starting typing with hints = " .. tostring(show_hint))
+        local actions = {}
+        if show_hint then actions[#actions+1] = typing_play_hint(); end
+        actions[#actions+1] = am.parallel{
+            typing_clear_hint(),
+            typing_user_input(),
+        }
+        self:action(am.series(actions))
+    end
 
-    -- Behaviour
-    local actions = {}
-    if show_hint then actions[#actions+1] = play_intro(); end
-    actions[#actions+1] = am.parallel{
-        clear_hint(),
-        user_input(),
-    }
-    local_root:tag"typing_panel":action(am.series(actions))
+    local_root:tag"typing_panel"
 
 	return local_root ^ am.scale(100,100) ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
@@ -404,7 +427,7 @@ function typing_panel(word, show_hint)
 	}
 end
 
-function play_intro()
+function typing_play_hint()
 	return coroutine.create(function()
 		local node = coroutine.yield()
 
@@ -418,7 +441,7 @@ function play_intro()
 	end)
 end
 
-function clear_hint()
+function typing_clear_hint()
     return am.series{
         -- Show word for a bit
         am.delay(1),
@@ -430,7 +453,7 @@ function clear_hint()
     }
 end
 
-function user_input()
+function typing_user_input()
 	return function(node)
 		for i,letter in ipairs({"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}) do
 			if win:key_pressed(letter) then
@@ -441,22 +464,18 @@ function user_input()
 	end
 end
 
-function exit()
-    return function()
-        win:close()
-    end
-end
-
+-------------------------------------------------------
+-- panels global array
+-------------------------------------------------------
+dict = {}
 local dictfile = io.open("dictionary.txt")
 if dictfile then
-    local dict = {}
     local index = 1
     -- Read dictionary
     for line in dictfile:lines() do
         if line ~= "" then 
             local match = string.match(line, "(%a%a+)%s+[nv]%.")
             if match then
-            if match == "Aa" then log(match) end
                 dict[index] = string.lower(match)
                 index = index + 1
             end
@@ -465,16 +484,15 @@ if dictfile then
     dictfile:close();
 
     math.randomseed(os.time())
-    randomword = dict[math.random(#dict)] 
+    math.random() -- without this, the first math.random(x,y) is always the same!
 else
     log("Failed to open dictionary")
     win:close()
 end
 
--------------------------------------------------------
--- panels global array
--------------------------------------------------------
-panels = { count = 0, nodeTable = {} }
+panels = { current = 1, so_far = 0, count = 0, nodeTable = {}, nodeGroup = am.group() }
+messageGroup = am.group()
+stampGroup = am.group()
 
 function PanelScaleControl(node)
 
@@ -514,15 +532,18 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 3,
+	count = 2, -- TODO put back to 3
 }
 
-
 function panels.MakeEmpty()
-	for b=1, panels.count do
+    panels.current = 1
+    panels.so_far = 0
+    panels.count = 0
+	for b=1, #panels do
 		panels[b] = nil
+        panels.nodeTable[b] = nil
 	end
-	panels.nodeTable = nil
+    panels.nodeGroup:remove_all()
 end
 
 
@@ -547,57 +568,241 @@ function panels.AddOne(activity)
 	scaleNode = p.node"scale"
 	
 	if activity == PanelActivity.word then
-		scaleNode = scaleNode ^ typing_panel(randomword, true)
-		p.text = "dog"
+        local randomword = dict[math.random(#dict)] 
+        p.game = typing_panel(randomword)
 	elseif activity == PanelActivity.pattern then
-		scaleNode = scaleNode ^ unlock_panel(test_pattern, true)
-		p.dots = 4
+        p.game = unlock_panel(test_pattern)
 	elseif activity == PanelActivity.drums then
-		scaleNode = scaleNode ^ drum_panel()
-		p.snare = true
+        p.game = drum_panel()
 	end
+    scaleNode = scaleNode ^ p.game
 	
 	-- provide nodes a getter to parent
 	function p.node:get_p() return p end
 	function scaleNode:get_p() return p end
 	
 	-- last of all, add p into the table and the node to the scene table
-	panels.count = panels.count + 1
-	p.index = panels.count
-	panels[panels.count] = p
-	panels.nodeTable[panels.count] = p.node
+	panels[#panels + 1] = p
+	p.index = #panels
+	panels.nodeTable[#panels] = p.node
+    panels.nodeGroup:append(p.node)
+    p.node.hidden = true
 end
-
 
 -------------------------------------------------------
--- dummy puzzle types (panel types)
+-- panel management functions
 -------------------------------------------------------
-
--- test panels
-for n=1, 7 do
-	panels.AddOne()
-end
-panels.AddOne( PanelActivity.drums )
-
-for n=1, 7 do -- demo only
-	if panels[n].activity == PanelActivity.drums then
-		panels[n].state = PanelState.input
-		break
-	end
+function set_active_panel(panel)
+    panel.state = PanelState.input
+    panel.node.hidden = false
 end
 
+function set_docked_panel(panel)
+    panel.state = PanelState.docked
+end
+
+function more_panels()
+    return panels.current + 1 <= #panels
+end
+
+function get_current_panel()
+    return panels[panels.current]
+end
+
+function get_next_panel()
+    if more_panels() then
+        return panels[panels.current + 1]
+    else
+        return nil
+    end
+end
+
+function rewind_to_first_panel()
+    local current_panel = get_current_panel()
+    animate_to_dock(current_panel)
+    set_docked_panel(current_panel)
+
+    panels.current = 1
+    local first_panel = get_current_panel()
+    animate_from_dock(first_panel)
+    set_active_panel(first_panel)
+    return first_panel
+end
+
+function next_panel()
+    local current_panel = get_current_panel()
+    animate_to_dock(current_panel)
+    set_docked_panel(current_panel)
+
+    local next_panel = nil
+    if more_panels() then
+        panels.current = panels.current + 1
+        next_panel = get_current_panel()
+        animate_from_dock(next_panel)
+        set_active_panel(next_panel)
+    end
+    return next_panel
+end
+
+function first_panel()
+    panels.current = 1
+    local first_panel = get_current_panel()
+    animate_from_dock(first_panel)
+    set_active_panel(first_panel)
+    message("New sequence!")
+    return first_panel;
+end
+
+function generate_sequence(panel_count)
+    log("Clear panels")
+    panels.MakeEmpty()
+    for n=1, panel_count do
+        log("Add panel")
+        panels.AddOne()
+    end
+end
+
+-------------------------------------------------------
+-- Animations
+-------------------------------------------------------
+function animate_to_dock(panel)
+end
+
+function animate_from_dock(panel)
+end
+
+function flash_border(panel, colour)
+    local target = panel.game"rect"
+    local original_colour = target.color
+    return am.series{
+        am.tween(target, 0.25, {color = colour}, am.ease.quadratic),
+        am.tween(target, 0.5, {color = original_colour}, am.ease.quadratic), 
+    }
+end
+
+function win_stamp()
+    local text = "Nice!"
+    local delay = 2
+    log("Show win stamp")
+    local stampNode = am.translate(0,0):tag"t" ^ am.rotate(0):tag"r" ^ am.scale(10):tag"s" ^
+        am.group(
+            am.rect(-50, -10, 50, 10, vec4(0,0.7,0,1)),
+            am.translate(0, 3) ^ am.text(text, vec4(0,0,0,1))
+        )
+    local stampAngle = math.random(-math.pi/4, math.pi/4)
+    local stampAction = am.series{
+        am.parallel{
+            am.tween(stampNode"r", 0.5, { angle = stampAngle }),
+            am.tween(stampNode"s", 0.5, { scale = vec3(4) }, am.ease.quadratic),
+        },
+        am.delay(delay),
+        am.parallel{
+            am.tween(stampNode"t", 1, { position2d = vec2(math.random(0, 100) - 50, -800) }, am.ease.quadratic),
+            am.tween(stampNode"r", 1, { angle = -stampAngle }),
+        },
+        function()
+            log("Remove win stamp")
+            messageGroup:remove(stampNode)
+            return true
+        end,
+    }
+    stampNode:action(stampAction)
+    stampGroup:append(stampNode)
+    return stampAction
+end
+
+function message(text, delay)
+    if not delay then delay = 2 end
+    log("Show message "..text.." for "..delay.." seconds")
+    local messageNode = am.translate(0,100):tag"t" ^ am.scale(0):tag"s" ^ 
+        am.group(
+            am.rect(-200, -10, 200, 10, vec4(0,0,0,1)), 
+            am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
+        )
+    messageNode:action(am.series{
+        am.parallel{
+            am.tween(messageNode"s", 0.25, { scale = vec3(2) }, am.ease.out(am.ease.quadratic)),
+            am.tween(messageNode"t", 0.1, { position2d = vec2(0, 0) }, am.ease.out(am.ease.quadratic)),
+        },
+        am.delay(delay),
+        am.parallel{
+            am.tween(messageNode"s", 0.25, { scale = vec3(0) }, am.ease.quadratic),
+            am.series{
+                am.delay(0.15),
+                am.tween(messageNode"t", 0.1, { position2d = vec2(0, 100) }, am.ease.quadratic),
+            },
+        },
+        function()
+            log("Remove message")
+            messageGroup:remove(messageNode)
+            return true
+        end,
+    })
+    messageGroup:append(messageNode)
+end
+
+-------------------------------------------------------
+-- Game control
+-------------------------------------------------------
 win.scene = am.group{
 	am.scale(4) ^ am.sprite("temp_background2.png"),
-	am.group() ^ panels.nodeTable,
+	am.group() ^ panels.nodeGroup,
+    am.translate(0, 250) ^ messageGroup,
+    stampGroup
 }
 
 -------------------------------------------------------
 -- main game loop
 -------------------------------------------------------
-win.scene:action(function(scene)
+-- Sequence 1*, 2* - FROM THE TOP: 1, 2, 3* -- FROM THE TOP: 1, 2, 3, 4*
+--
+win.scene:action(coroutine.create(function()
+    local sequence_length = 3
+    while true do
+        log("Generating sequence of length "..sequence_length)
+        generate_sequence(sequence_length)
+        log("Start sequence")
+        first_panel().game:start()
+        log("Start game loop proper")
+        while true do
+            local active_panel = get_current_panel()
+            if active_panel.game:won() then
+                am.wait(flash_border(active_panel, vec4(0, 1, 0, 1)))
 
-end)
-
-
-
-
+                if panels.so_far < panels.current then
+                    log("NEW PANEL DONE, Panels sofar ".. panels.so_far..", current "..panels.current)
+                    -- completed new panel!
+                    panels.so_far = panels.current
+                    active_panel.game.show_hint = false
+                    message("From the top!")
+                    local next_panel = rewind_to_first_panel()
+                    next_panel.game:reset()
+                    next_panel.game:start()
+                else
+                    log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
+                    am.wait(win_stamp())
+                    -- completed panel
+                    local next_panel = next_panel()
+                    if next_panel then
+                        next_panel.game:reset()
+                        next_panel.game:start()
+                    else
+                        log("Sequence won!")
+                        sequence_length = sequence_length + 1
+                        break
+                    end
+                end
+            elseif active_panel.game:lost() then
+                am.wait(flash_border(active_panel, vec4(1, 0, 0, 1)))
+                log("Sequence failed!")
+                -- show failure screen
+                -- wait for restart
+                sequence_length = 3
+                break
+            else
+                -- Nothing to do, yield for next frame
+                coroutine.yield(false)
+            end
+        end
+    end
+end))
