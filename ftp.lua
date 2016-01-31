@@ -50,9 +50,9 @@ function drum_panel(pattern, show_hint)
 	-- generate pattern
 	patterncount = 4--math.random(3,4)
 	if #pattern == 0 then
+		log("new drum pattern")
 		for n=1, patterncount do
 			pattern[n] = math.random(1,4)
-			log(pattern[n])
 		end
 	end
 	
@@ -68,14 +68,14 @@ function drum_panel(pattern, show_hint)
 				return true
 			end
 		end
+		return false
     end
     function local_root:won()
-        return (not self:lost() and #user_clicks == #pattern);
+        return (not self:lost() and #user_clicks == #pattern)
     end
     function local_root:reset()
-		pattern = {}
-    end
-    function local_root:start()
+		user_clicks = {}
+		local_root.user_clicks = user_clicks
     end
 	
 	buttons = {
@@ -136,18 +136,23 @@ function drum_panel(pattern, show_hint)
 		}
 	end
 	
-	-- behaviour
-    local actions = {}
-	-- drum hints
-	for dh=1, #pattern do
-		actions[dh] = drum_action( local_root, pattern[dh] )
-	end
-	
-	actions[#actions+1] = drum_user_input()
-	
-	local_root:tag"drum_panel":action(am.series(actions))
+	local_root:tag"drum_panel"
 	local_root.patternaction = patternaction
 	local_root.drum_action = drum_action
+	local_root.pattern = pattern
+	
+	function local_root:start()
+		-- behaviour
+		local actions = {}
+		-- drum hints
+		if show_hint then
+			for dh=1, #pattern do
+				actions[dh] = drum_action( local_root, pattern[dh] )
+			end
+		end
+		actions[#actions+1] = drum_user_input()
+		self:action(am.series(actions))
+    end
 	
 	return local_root
 		^ am.scale(100,100)
@@ -177,12 +182,14 @@ function drum_user_input()
 				pos = panel_node.buttons[b].pos
 				if math.length(pos - mousepos) < hit_radius then
 					panel_node.user_clicks[#panel_node.user_clicks+1] = b
-					--log( table.tostring(panel_node.user_clicks) )
+					log( table.tostring(panel_node.user_clicks) )
+					log( table.tostring(panel_node.pattern) )
 					panel_node:tag"drum_panel":action(
 						panel_node.drum_action( panel_node, b ))
 				end
 			end
         end
+		return panel_node:won() or panel_node:lost()
     end
 end
 
@@ -196,7 +203,7 @@ test_pattern = {{0,0}, {1,1}, {1,2}, {1,3}, {2,3}, {3,3}, {3,2}}
 function generate_unlock_pattern(pattern_length, grid_size_x, grid_size_y)
     function add_direction(grid_node, direction)
         return { grid_node[1] + direction[1], grid_node[2] + direction[2] }
-    end
+    end 
     function pattern_contains(pattern, grid_node)
         for i, n in ipairs(pattern) do
             if n[1] == grid_node[1] and n[2] == grid_node[2] then
@@ -660,7 +667,7 @@ PanelActivity =
 	pattern = 2,
 	drums = 3,
 	--
-	count = 2,
+	count = 3,
 }
 
 function panels.MakeEmpty()
@@ -680,6 +687,7 @@ function panels.AddOne(activity)
 	if( activity == nil or activity > PanelActivity.count ) then
 		activity = math.random(1,PanelActivity.count)
 	end
+	activity = 3
 	
 	local p =
 	{	-- here we define the panel table parameters
