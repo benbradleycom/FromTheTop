@@ -37,10 +37,13 @@ function drum_panel(pattern, show_hint)
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
-	nextdrum = 99503802
 	
 	pip_color = vec4(0.2,0,0.6,1)
-	bop_color = vec4(0,0.6,0.2,1) 
+	bop_color = vec4(0,0.6,0.2,1)
+	
+	pattern = {
+		1, 2, 2, 1,
+	}
 	
     function local_root:lost()
         return false
@@ -56,8 +59,8 @@ function drum_panel(pattern, show_hint)
 		return am.series{
 			function(node)
 				if nextdrum == soundid then
-					if plays then win.scene:action(am.play(soundid)) end
-					node.scale = vec3(1.3)
+					win.scene:action(am.play(soundid))
+					
 					return true
 				end
 			end,
@@ -65,13 +68,27 @@ function drum_panel(pattern, show_hint)
 		}
 	end)end
 	
-	lightButton = 1.2
-	darkButton = 0.8
-	
-	piphiButton = am.group
+	drum_actions =
 	{
-		am.scale(1):action(bumper(sounds.piphi,true))
-		^ am.translate(0,-0.05)
+		function() return am.parallel {
+			am.play(sounds.piphi),
+		--	function() piphiButton.scale = vec3(1.3) end,
+			am.delay(0.8), 
+		} end,
+		
+		function() return am.parallel {
+			am.play(sounds.piplo),
+		--	function() piploButton.scale = vec3(1.3) end,
+			am.delay(0.8),
+		} end,
+	}
+	
+	local lightButton = 1.2 
+	local darkButton = 0.8
+	
+	piphiButton = am.scale(1) ^ am.group
+	{
+		am.translate(0,-0.05)
 		^ am.scale(0.1)
 		^ am.rect(-1,-0.5,1,0.5,pip_color*lightButton),
 		
@@ -79,34 +96,32 @@ function drum_panel(pattern, show_hint)
 		^ am.circle(vec2(0),0.1,pip_color*lightButton,8),
 	}
 	
-	piploButton = am.group
+	piploButton = am.scale(1) ^ am.group
 	{
-		am.scale(1):action(bumper(sounds.piplo,true))
-		^ am.translate(0,0.05)
+		am.translate(0,0.05)
 		^ am.scale(0.1)
 		^ am.rect(-1,-0.5,1,0.5,pip_color*darkButton),
 		
 		am.scale(1):action(bumper(sounds.piplo))
 		^ am.circle(vec2(0),0.1,pip_color*darkButton,8),
-	}	
+	}
 	
-	bophiButton = am.group
+	bophiButton = am.scale(1):action(bumper(sounds.bophi,true))
+	^ am.group
 	{
-		am.scale(1):action(bumper(sounds.bophi,true))
-		^ am.rotate(math.rad(45))
+		am.rotate(math.rad(45))
 		^ am.scale(0.071)
 		^ am.rect(-1,-1,1,1,bop_color*lightButton),
 		
-		am.scale(1):action(bumper(sounds.bophi))
-		^ am.translate(0,-0.05)
+		am.translate(0,-0.05)
 		^ am.scale(0.05)
 		^ am.rect(-1,-1,1,1,bop_color*lightButton),
 	}
 	
-	boploButton = am.group
+	boploButton = am.scale(1):action(bumper(sounds.boplo,true))
+	^ am.group
 	{
-		am.scale(1):action(bumper(sounds.boplo,true))
-		^ am.rotate(math.rad(45))
+		am.rotate(math.rad(45))
 		^ am.scale(0.071)
 		^ am.rect(-1,-1,1,1,bop_color*darkButton),
 		
@@ -118,9 +133,13 @@ function drum_panel(pattern, show_hint)
 	
     -- behaviour
     local actions = {}
-    if show_hint then actions[#actions+1] = play_intro(); end
+	-- drum hints
+	for dh=1, #pattern do
+		actions[dh] = drum_actions[ pattern[dh] ]()
+	end
 	
     local_root:tag"drum_panel":action(am.series(actions))
+	local_root.patternaction = patternaction
 	
 	return local_root
 		^ am.scale(100,100)
@@ -133,6 +152,16 @@ function drum_panel(pattern, show_hint)
 			am.translate(0.35, 0.65) ^ am.scale(0.8) ^ piphiButton,
 			am.translate(0.65, 0.65) ^ am.scale(0.8) ^ bophiButton,
 		}
+end
+
+function drum_play_hint()
+    return coroutine.create(function()
+        local panel_node = coroutine.yield()
+        for i=1, #panel_node.pattern do
+        --   panel_node.drum_action:play_hint_drum(panel_node.pattern[i])
+            am.wait(am.delay(1))
+        end
+    end)
 end
 
 -------------------------------------------------------
