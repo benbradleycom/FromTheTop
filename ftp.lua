@@ -368,10 +368,12 @@ end
 function unlock_play_hint()
     return coroutine.create(function()
         local panel_node = coroutine.yield()
+        am.wait(display_message("Remember the pattern!", vec4(1,0,0,1)))
         for i=1, #panel_node.pattern do
             panel_node:add_hint_node(panel_node.pattern[i])
             am.wait(am.delay(0.25))
         end
+        am.wait(clear_message())
     end)
 end
 
@@ -380,7 +382,13 @@ function unlock_clear_hint()
         am.delay(1),
         function(panel_node)
             panel_node:clear_hint()
-        end
+            return true
+        end,
+        function()
+            log("Trace the pattern")
+            display_prompt("Trace the pattern!")
+            return true
+        end,
     }
 end
 
@@ -405,7 +413,11 @@ function unlock_user_input()
                 end
             end
         end
-        return panel_node:lost() or panel_node:won()
+        local finished = panel_node:lost() or panel_node:won()
+        if finished then
+            clear_prompt()
+        end
+        return finished
     end
 end
 
@@ -463,6 +475,7 @@ function typing_panel(word)
     end
     function local_root:reset()
         user_text = ""
+        self:update_text()
     end
     function local_root:start()
         log("Starting typing with hints = " .. tostring(show_hint))
@@ -488,6 +501,7 @@ function typing_play_hint()
 	return coroutine.create(function()
 		local node = coroutine.yield()
 
+        am.wait(display_message("Remember the word!", vec4(1,0,0,1)))
 		-- Type out word
 		for i=1, #node.word do
 			am.wait(am.delay(0.25))
@@ -506,16 +520,26 @@ function typing_clear_hint()
             -- Clear ready for input
             node.word_chars_to_show = 0
             node.cursor = true
-        end
+            return true
+        end,
+        function()
+            clear_message()
+            display_prompt("Type the word!")
+            return true
+        end,
     }
 end
 
 function typing_user_input()
-	return function(node)
+	return function(panel_node)
 		for i,letter in ipairs({"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}) do
 			if win:key_pressed(letter) then
-				node.user_text = node.user_text .. letter
-                return node:lost() or node:won()
+				panel_node.user_text = panel_node.user_text .. letter
+                local finished = panel_node:lost() or panel_node:won()
+                if finished then
+                    clear_prompt()
+                end
+                return finished
 			end
 		end
 	end
@@ -549,6 +573,7 @@ end
 
 panels = { current = 1, so_far = 0, count = 0, nodeTable = {}, nodeGroup = am.group() }
 messageGroup = am.group()
+promptGroup = am.group()
 stampGroup = am.group()
 
 function PanelScaleControl(node)
@@ -771,37 +796,97 @@ function win_stamp()
     return stampAction
 end
 
-function message(text, delay)
-    if not delay then delay = 2 end
-    log("Show message "..text.." for "..delay.." seconds")
+prompt_animating = false
+
+function display_prompt(text, bg_colour)
+    if not bg_colour then bg_colour = vec4(0,0,0,1) end
+    log("Show prompt "..text)
+    local promptNode = am.translate(0,-600):tag"t" ^ am.scale(2):tag"s" ^ 
+        am.group(
+            am.rect(-200, -10, 200, 10, bg_colour), 
+            am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
+        )
+    local promptAction = am.series{
+        function() prompt_animating = true; return true end,
+        am.tween(promptNode"t", 0.1, { position2d = vec2(0, 0) }, am.ease.out(am.ease.quadratic)),
+        function() prompt_animating = false; return true end,
+    }
+    promptNode:action(promptAction)
+    promptGroup:append(promptNode)
+    return promptAction
+end
+
+function clear_prompt()
+    local promptNode = promptGroup"t"
+    log("Clear current prompt")
+    -- Default to an empty action for a calling coroutine
+    -- that wants to wait on the prompt clear animation
+    local promptAction = function() return true end
+    if promptNode then
+        promptAction = am.series{
+            function() return not prompt_animating end,
+            am.tween(promptNode"s", 0.1, { scale = vec3(0) }, am.ease.quadratic),
+            function()
+                log("Remove prompt")
+                promptGroup:remove(promptNode)
+                return true
+            end,
+        }
+        promptNode:action(promptAction)
+    end
+    return promptAction
+end
+
+message_animating = false
+
+function display_message(text, bg_colour)
+    if not bg_colour then bg_colour = vec4(0,0,0,1) end
+    log("Show message "..text)
     local messageNode = am.translate(0,100):tag"t" ^ am.scale(0):tag"s" ^ 
         am.group(
-            am.rect(-200, -10, 200, 10, vec4(0,0,0,1)), 
+            am.rect(-200, -10, 200, 10, bg_colour), 
             am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
         )
     local messageAction = am.series{
+        function() message_animating = true; return true end,
         am.parallel{
             am.tween(messageNode"s", 0.25, { scale = vec3(2) }, am.ease.out(am.ease.quadratic)),
             am.tween(messageNode"t", 0.1, { position2d = vec2(0, 0) }, am.ease.out(am.ease.quadratic)),
         },
-        am.delay(delay),
-        am.parallel{
-            am.tween(messageNode"s", 0.25, { scale = vec3(0) }, am.ease.quadratic),
-            am.series{
-                am.delay(0.15),
-                am.tween(messageNode"t", 0.1, { position2d = vec2(0, 100) }, am.ease.quadratic),
-            },
-        },
-        function()
-            log("Remove message")
-            messageGroup:remove(messageNode)
-            return true
-        end,
+        function() message_animating = false; return true end,
     }
     messageNode:action(messageAction)
     messageGroup:append(messageNode)
     return messageAction
 end
+
+function clear_message()
+    local messageNode = messageGroup"t"
+    log("Clear current message")
+    -- Default to an empty action for a calling coroutine
+    -- that wants to wait on the message clear animation
+    local messageAction = function() return true end
+    if messageNode then
+        messageAction = am.series{
+            function() return not message_animating end,
+            am.parallel{
+                am.tween(messageNode"s", 0.25, { scale = vec3(0) }, am.ease.quadratic),
+                am.series{
+                    am.delay(0.15),
+                    am.tween(messageNode"t", 0.1, { position2d = vec2(0, 100) }, am.ease.quadratic),
+                },
+            },
+            function()
+                log("Remove message")
+                messageGroup:remove(messageNode)
+                return true
+            end,
+        }
+        messageNode:action(messageAction)
+    end
+    return messageAction
+end
+
 
 -------------------------------------------------------
 -- Game control
@@ -810,6 +895,7 @@ win.scene = am.group{
 	am.scale(4) ^ am.sprite("temp_background2.png"),
 	am.group() ^ panels.nodeGroup,
     am.translate(0, 250) ^ messageGroup,
+    am.translate(0, -250) ^ promptGroup,
     stampGroup
 }
 
@@ -820,7 +906,9 @@ win.scene = am.group{
 --
 win.scene:action(coroutine.create(function()
     local sequence_length = 3
-    message("Let's go!")
+    am.wait(display_message("Let's go!"))
+    am.wait(am.delay(1))
+    am.wait(clear_message())
     while true do
         log("Generating sequence of length "..sequence_length)
         generate_sequence(sequence_length)
@@ -837,7 +925,9 @@ win.scene:action(coroutine.create(function()
                     -- completed new panel!
                     panels.so_far = panels.current
                     active_panel.game.show_hint = false
-                    message("From the top!")
+                    am.wait(display_message("From the top!"))
+                    am.wait(am.delay(1))
+                    clear_message()
                     local next_panel = rewind_to_first_panel()
                     next_panel.game:reset()
                     next_panel.game:start()
@@ -846,20 +936,25 @@ win.scene:action(coroutine.create(function()
                     -- completed panel
                     local next_panel = get_next_panel()
                     if next_panel then
+                        next_panel.game:reset()
                         if panels.so_far < next_panel.index then
                             -- starting a new panel
                             am.wait(win_stamp())
                             log("Win stamp done, new panel message")
-                            am.wait(message("New panel"))
+                            am.wait(display_message("New panel"))
+                            advance_panel()
+                            am.wait(am.delay(1))
+                            am.wait(clear_message())
                             log("New panel message done");
+                        else
+                            advance_panel()
                         end
-                        advance_panel()
-                        next_panel.game:reset()
                         next_panel.game:start()
                     else
                         log("Sequence won!")
                         am.wait(win_stamp())
-                        message("New sequence!")
+                        display_message("New sequence!")
+                        clear_message()
                         sequence_length = sequence_length + 1
                         break
                     end
