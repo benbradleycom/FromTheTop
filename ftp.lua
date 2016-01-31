@@ -125,15 +125,26 @@ function drum_panel(pattern, show_hint)
 	local_root.buttons = buttons
 	
 	function drum_action( root, index )
-		return am.parallel {
-			am.play(root.buttons[index].sound),
-			function()
-				root.buttons[index].scale = vec3(1.5)
-				root.buttons[index]:action(am.tween(0.35, {scale = vec3(1)} ))
-				return true
-			end,
-			am.delay(0.8),
-		}
+		if( show_hint ) then
+			return am.parallel {
+				am.play(root.buttons[index].sound),
+				function()
+					root.buttons[index].scale = vec3(1.5)
+					root.buttons[index]:action(am.tween(0.35, {scale = vec3(1)} ))
+					return true
+				end,
+				am.delay(0.8),
+			}
+		else
+			return am.parallel {
+				am.play(root.buttons[index].sound),
+				function()
+					root.buttons[index].scale = vec3(1.5)
+					root.buttons[index]:action(am.tween(0.35, {scale = vec3(1)} ))
+					return true
+				end,
+			}
+		end
 	end
 	
 	local_root:tag"drum_panel"
