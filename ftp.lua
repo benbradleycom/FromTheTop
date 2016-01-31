@@ -690,7 +690,7 @@ function rewind_to_first_panel()
     return first_panel
 end
 
-function next_panel()
+function advance_panel()
     local current_panel = get_current_panel()
     animate_to_dock(current_panel)
     set_docked_panel(current_panel)
@@ -710,7 +710,6 @@ function first_panel()
     local first_panel = get_current_panel()
     animate_from_dock(first_panel)
     set_active_panel(first_panel)
-    message("New sequence!")
     return first_panel;
 end
 
@@ -780,7 +779,7 @@ function message(text, delay)
             am.rect(-200, -10, 200, 10, vec4(0,0,0,1)), 
             am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
         )
-    messageNode:action(am.series{
+    local messageAction = am.series{
         am.parallel{
             am.tween(messageNode"s", 0.25, { scale = vec3(2) }, am.ease.out(am.ease.quadratic)),
             am.tween(messageNode"t", 0.1, { position2d = vec2(0, 0) }, am.ease.out(am.ease.quadratic)),
@@ -798,8 +797,10 @@ function message(text, delay)
             messageGroup:remove(messageNode)
             return true
         end,
-    })
+    }
+    messageNode:action(messageAction)
     messageGroup:append(messageNode)
+    return messageAction
 end
 
 -------------------------------------------------------
@@ -819,6 +820,7 @@ win.scene = am.group{
 --
 win.scene:action(coroutine.create(function()
     local sequence_length = 3
+    message("Let's go!")
     while true do
         log("Generating sequence of length "..sequence_length)
         generate_sequence(sequence_length)
@@ -841,14 +843,23 @@ win.scene:action(coroutine.create(function()
                     next_panel.game:start()
                 else
                     log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
-                    am.wait(win_stamp())
                     -- completed panel
-                    local next_panel = next_panel()
+                    local next_panel = get_next_panel()
                     if next_panel then
+                        if panels.so_far < next_panel.index then
+                            -- starting a new panel
+                            am.wait(win_stamp())
+                            log("Win stamp done, new panel message")
+                            am.wait(message("New panel"))
+                            log("New panel message done");
+                        end
+                        advance_panel()
                         next_panel.game:reset()
                         next_panel.game:start()
                     else
                         log("Sequence won!")
+                        am.wait(win_stamp())
+                        message("New sequence!")
                         sequence_length = sequence_length + 1
                         break
                     end
