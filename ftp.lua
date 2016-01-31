@@ -330,7 +330,7 @@ function unlock_panel(pattern, grid_size_x, grid_size_y)
     end
     function local_root:start()
         local actions = {}
-        if show_hint then actions[#actions+1] = unlock_play_hint(); end
+        if show_hint then actions[#actions+1] = unlock_play_hint() end
         actions[#actions+1] = am.parallel{
             unlock_clear_hint(),
             unlock_user_input(),
@@ -402,7 +402,7 @@ function unlock_make_grid(grid_def)
     return am.scale(1) ^ dots
 end
 
-function unlock_play()
+function unlock_play_hint()
     return coroutine.create(function()
         local panel_node = coroutine.yield()
         am.wait(display_message("Remember the pattern!", vec4(1,0,0,1)))
