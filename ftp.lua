@@ -400,7 +400,7 @@ function unlock_play_hint()
         am.wait(display_message("Remember the pattern!", vec4(1,0,0,1)))
         for i=1, #panel_node.pattern do
             panel_node:add_hint_node(panel_node.pattern[i])
-            am.wait(am.delay(0.25))
+            am.wait(am.delay(0.5))
         end
         am.wait(clear_message())
     end)
@@ -936,7 +936,7 @@ win.scene = am.group{
 -- Sequence 1*, 2* - FROM THE TOP: 1, 2, 3* -- FROM THE TOP: 1, 2, 3, 4*
 --
 win.scene:action(coroutine.create(function()
-    local sequence_length = 3
+    local sequence_length = 10
     am.wait(display_message("Let's go!"))
     am.wait(am.delay(1))
     am.wait(clear_message())
@@ -984,9 +984,9 @@ win.scene:action(coroutine.create(function()
                     else
                         log("Sequence won!")
                         am.wait(win_stamp())
-                        display_message("New sequence!")
                         clear_message()
-                        sequence_length = sequence_length + 1
+                        -- win screen
+                        -- show score and time
                         break
                     end
                 end
@@ -995,7 +995,6 @@ win.scene:action(coroutine.create(function()
                 log("Sequence failed!")
                 -- show failure screen
                 -- wait for restart
-                sequence_length = 3
                 break
             else
                 -- Nothing to do, yield for next frame
