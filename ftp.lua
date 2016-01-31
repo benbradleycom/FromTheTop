@@ -2,8 +2,7 @@
 yellow = vec4(1, 1, 0, 1)
 orange = vec4(1, 0.5, 0, 1)
 pink = vec4(1,0,0.5,1)
-shadow_offset = 0.02 -- temp?
-background_color = vec4(0.7, 0.7, 0.7, 1)
+shadow_offset = 0.03
 shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 win = am.window{
@@ -36,7 +35,7 @@ sounds =
 
 function drum_panel(pattern, show_hint)
 
-	local background_color = vec4(0.7, 0.8, 0.9, 1)
+	local background_color = vec4(0.8, 0.8, 0.8, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
     local show_hint = true
@@ -252,7 +251,7 @@ end
 
 function unlock_panel(pattern, grid_size_x, grid_size_y)
 	local shadow_offset = 0.02 -- temp?
-	local background_color = vec4(0.7, 0.7, 0.7, 1)
+	local background_color = vec4(0.7, 0.8, 0.9, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
     local grid_def = { dx = 0.15, dy = 0.15, size_x = grid_size_x, size_y = grid_size_y }
 
@@ -445,7 +444,7 @@ end
 
 function typing_panel(word)
 	local shadow_offset = 0.02 -- temp?
-	local background_color = vec4(0.7, 0.7, 0.7, 1)
+	local background_color = vec4(0.9, 0.85, 0.7, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
