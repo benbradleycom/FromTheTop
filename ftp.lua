@@ -458,6 +458,7 @@ function typing_panel(word)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.9, 0.85, 0.7, 1)
 	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
+    local text_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
     local show_hint = true
@@ -522,7 +523,7 @@ function typing_panel(word)
 	return local_root ^ am.scale(100,100) ^ am.translate(-0.5, -0.5) ^ am.group{
 		am.rect(shadow_offset,-shadow_offset,1 + shadow_offset,1 - shadow_offset, shadow_color),
 		am.rect(0,0,1,1, background_color),
-		am.translate(0.5, 0.5) ^ am.scale(2) ^ am.scale(1/0.8) ^ am.scale(1/400, 1/300) ^ am.text("_", vec4(0.9, 0.9, 0.9, 1)),
+		am.translate(0.5, 0.5) ^ am.scale(2) ^ am.scale(1/0.8) ^ am.scale(1/400, 1/300) ^ am.text("_", text_color),
 	}
 end
 
@@ -795,7 +796,8 @@ function flash_border(panel, colour)
 end
 
 function win_stamp()
-    local text = "Nice!"
+    local superlatives = {"Nice!", "Awesome!", "Radical!"}
+    local text = superlatives[math.random(1, #superlatives)]
     local delay = 2
     log("Show win stamp")
     local stampNode = am.translate(0,0):tag"t" ^ am.rotate(0):tag"r" ^ am.scale(10):tag"s" ^
