@@ -145,11 +145,68 @@ end
 
 test_pattern = {{0,0}, {1,1}, {1,2}, {1,3}, {2,3}, {3,3}, {3,2}}
 
-function unlock_panel(pattern)
+function generate_unlock_pattern(pattern_length, grid_size_x, grid_size_y)
+    function add_direction(grid_node, direction)
+        return { grid_node[1] + direction[1], grid_node[2] + direction[2] }
+    end
+    function pattern_contains(pattern, grid_node)
+        for i, n in ipairs(pattern) do
+            if n[1] == grid_node[1] and n[2] == grid_node[2] then
+                return true
+            end
+        end
+        return false
+    end
+    function within_grid(grid_node)
+        return grid_node[1] >= 0 and grid_node[1] < grid_size_x
+           and grid_node[2] >= 0 and grid_node[2] < grid_size_y
+    end
+    local result = {}
+    local all_directions = {
+        {1,0}, {1,-1}, {0,-1}, {-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}
+    }
+    while #result < pattern_length do
+        log("Generate unlock pattern")
+        result = {}
+        -- random start location
+        result[#result + 1] = { math.random(0, grid_size_x - 1),
+                                math.random(0, grid_size_y - 1) }
+        log("Generating start path element: ("..result[#result][1]..","..result[#result][2]..")")
+        for i=2, pattern_length do
+            local last = result[#result]
+            -- random walk to adjacent unused node
+            -- don't cross paths
+
+            -- calculate available directions
+            local available_directions = {}
+            for i, dir in ipairs(all_directions) do
+                local possible_dest = add_direction(last, dir)
+                if within_grid(possible_dest) then
+                    if not pattern_contains(result, possible_dest) then
+                        -- not occupied
+                        available_directions[#available_directions + 1] = dir
+                    end
+                end
+            end
+
+            -- if no directions available, restart walk from beginning
+            if #available_directions == 0 then log("Abort pattern, restart"); break end
+
+            -- randomly choose a direction
+            local selected_direction = available_directions[math.random(1, #available_directions)]
+            local new_grid_node = add_direction(last, selected_direction)
+            log("Generating path element ".. (#result + 1)..": ("..new_grid_node[1]..","..new_grid_node[2]..")")
+            result[#result + 1] = new_grid_node
+        end
+    end
+    return result
+end
+
+function unlock_panel(pattern, grid_size_x, grid_size_y)
 	local shadow_offset = 0.02 -- temp?
 	local background_color = vec4(0.7, 0.7, 0.7, 1)
 	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
-    grid_def = { dx = 0.15, dy = 0.15, size_x = 4, size_y = 4 }
+    local grid_def = { dx = 0.15, dy = 0.15, size_x = grid_size_x, size_y = grid_size_y }
 
     local local_root = am.scale(1)
     local show_hint = true
@@ -553,7 +610,11 @@ function panels.AddOne(activity)
         local randomword = dict[math.random(#dict)] 
         p.game = typing_panel(randomword)
 	elseif activity == PanelActivity.pattern then
-        p.game = unlock_panel(test_pattern)
+        local grid_size_x = 4
+        local grid_size_y = 4
+        local pattern_length = 4
+        local pattern = generate_unlock_pattern(pattern_length, grid_size_x, grid_size_y)
+        p.game = unlock_panel(pattern, grid_size_x, grid_size_y)
 	elseif activity == PanelActivity.drums then
         p.game = drum_panel()
 	end
@@ -671,7 +732,7 @@ function win_stamp()
             am.rect(-50, -10, 50, 10, vec4(0,0.7,0,1)),
             am.translate(0, 3) ^ am.text(text, vec4(0,0,0,1))
         )
-    local stampAngle = math.random(-math.pi/4, math.pi/4)
+    local stampAngle = (math.random() * math.pi / 2) - (math.pi / 4)
     local stampAction = am.series{
         am.parallel{
             am.tween(stampNode"r", 0.5, { angle = stampAngle }),
