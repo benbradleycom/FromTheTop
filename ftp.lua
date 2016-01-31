@@ -474,6 +474,7 @@ end
 
 panels = { current = 1, so_far = 0, count = 0, nodeTable = {}, nodeGroup = am.group() }
 messageGroup = am.group()
+stampGroup = am.group()
 
 function PanelScaleControl(node)
 
@@ -661,6 +662,37 @@ function flash_border(panel, colour)
     }
 end
 
+function win_stamp()
+    local text = "Nice!"
+    local delay = 2
+    log("Show win stamp")
+    local stampNode = am.translate(0,0):tag"t" ^ am.rotate(0):tag"r" ^ am.scale(10):tag"s" ^
+        am.group(
+            am.rect(-50, -10, 50, 10, vec4(0,0.7,0,1)),
+            am.translate(0, 3) ^ am.text(text, vec4(0,0,0,1))
+        )
+    local stampAngle = math.random(-math.pi/4, math.pi/4)
+    local stampAction = am.series{
+        am.parallel{
+            am.tween(stampNode"r", 0.5, { angle = stampAngle }),
+            am.tween(stampNode"s", 0.5, { scale = vec3(4) }, am.ease.quadratic),
+        },
+        am.delay(delay),
+        am.parallel{
+            am.tween(stampNode"t", 1, { position2d = vec2(math.random(0, 100) - 50, -800) }, am.ease.quadratic),
+            am.tween(stampNode"r", 1, { angle = -stampAngle }),
+        },
+        function()
+            log("Remove win stamp")
+            messageGroup:remove(stampNode)
+            return true
+        end,
+    }
+    stampNode:action(stampAction)
+    stampGroup:append(stampNode)
+    return stampAction
+end
+
 function message(text, delay)
     if not delay then delay = 2 end
     log("Show message "..text.." for "..delay.." seconds")
@@ -682,10 +714,10 @@ function message(text, delay)
                 am.tween(messageNode"t", 0.1, { position2d = vec2(0, 100) }, am.ease.quadratic),
             },
         },
-        am.tween(0.25, { scale = vec3(0) }, am.ease.quadratic),
         function()
             log("Remove message")
             messageGroup:remove(messageNode)
+            return true
         end,
     })
     messageGroup:append(messageNode)
@@ -697,7 +729,8 @@ end
 win.scene = am.group{
 	am.scale(4) ^ am.sprite("temp_background2.png"),
 	am.group() ^ panels.nodeGroup,
-    am.translate(0, 250) ^ messageGroup
+    am.translate(0, 250) ^ messageGroup,
+    stampGroup
 }
 
 -------------------------------------------------------
@@ -723,11 +756,13 @@ win.scene:action(coroutine.create(function()
                     -- completed new panel!
                     panels.so_far = panels.current
                     active_panel.game.show_hint = false
+                    message("From the top!")
                     local next_panel = rewind_to_first_panel()
                     next_panel.game:reset()
                     next_panel.game:start()
                 else
-                log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
+                    log("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
+                    am.wait(win_stamp())
                     -- completed panel
                     local next_panel = next_panel()
                     if next_panel then
