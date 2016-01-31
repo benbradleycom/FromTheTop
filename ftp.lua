@@ -56,14 +56,21 @@ function drum_panel(pattern, show_hint)
 		end
 	end
 	
+	local user_clicks = {}
+	local_root.user_clicks = user_clicks
+	
     function local_root:set_show_hint(v)
         show_hint = v
     end
     function local_root:lost()
-        return false
+		for i, click in ipairs(user_clicks) do
+			if i > #pattern or pattern[i] ~= user_clicks[i] then
+				return true
+			end
+		end
     end
     function local_root:won()
-        return false
+        return (not self:lost() and #user_clicks == #pattern);
     end
     function local_root:reset()
 		pattern = {}
@@ -121,8 +128,8 @@ function drum_panel(pattern, show_hint)
 		return am.parallel {
 			am.play(root.buttons[index].sound),
 			function()
-				root.buttons[index].scale = vec3(1.3)
-				root.buttons[index]:action(am.tween(0.3, {scale = vec3(1)} ))
+				root.buttons[index].scale = vec3(1.5)
+				root.buttons[index]:action(am.tween(0.35, {scale = vec3(1)} ))
 				return true
 			end,
 			am.delay(0.8),
@@ -140,6 +147,7 @@ function drum_panel(pattern, show_hint)
 	
 	local_root:tag"drum_panel":action(am.series(actions))
 	local_root.patternaction = patternaction
+	local_root.drum_action = drum_action
 	
 	return local_root
 		^ am.scale(100,100)
@@ -156,7 +164,7 @@ end
 
 function drum_user_input()
     return function(panel_node)
-        if win:mouse_down("left") or win:mouse_down("right") then
+        if win:mouse_pressed("left") or win:mouse_pressed("right") then
 		
             local window_mousepos = win:mouse_position()
             local mousepos = vec2(
@@ -168,23 +176,16 @@ function drum_user_input()
             for b=1, #panel_node.buttons do
 				pos = panel_node.buttons[b].pos
 				if math.length(pos - mousepos) < hit_radius then
-					log(b)
+					panel_node.user_clicks[#panel_node.user_clicks+1] = b
+					--log( table.tostring(panel_node.user_clicks) )
+					panel_node:tag"drum_panel":action(
+						panel_node.drum_action( panel_node, b ))
 				end
 			end
         end
     end
 end
 
---[[ --TODO
-function drum_play_hint()
-    return coroutine.create(function()
-        local panel_node = coroutine.yield()
-        for i=1, #panel_node.pattern do
-        --   panel_node.drum_action:play_hint_drum(panel_node.pattern[i])
-            am.wait(am.delay(1))
-        end
-    end)
-end]]
 
 -------------------------------------------------------
 -- unlock pattern
@@ -394,7 +395,7 @@ function unlock_make_grid(grid_def)
     return am.scale(1) ^ dots
 end
 
-function unlock_play_hint()
+function unlock_play()
     return coroutine.create(function()
         local panel_node = coroutine.yield()
         am.wait(display_message("Remember the pattern!", vec4(1,0,0,1)))
