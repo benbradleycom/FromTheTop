@@ -141,6 +141,7 @@ function drum_panel(pattern, show_hint)
 		}
 end
 
+--[[ --TODO
 function drum_play_hint()
     return coroutine.create(function()
         local panel_node = coroutine.yield()
@@ -149,7 +150,7 @@ function drum_play_hint()
             am.wait(am.delay(1))
         end
     end)
-end
+end]]
 
 -------------------------------------------------------
 -- unlock pattern
@@ -290,7 +291,7 @@ function unlock_make_grid(grid_def)
             dots[#dots + 1] = am.circle(dot_pos, dot_size, dot_colour)
         end
     end
-
+	
     return am.scale(1) ^ dots
 end
 
