@@ -1,0 +1,2 @@
+amulet main.lua
+cmd
