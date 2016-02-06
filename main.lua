@@ -166,7 +166,10 @@ function drum_panel(pattern, show_hint)
 		end
 		actions[#actions+1] = drum_clear_hint()
 		actions[#actions+1] = drum_user_input()
-		self:action(am.series(actions))
+		nodeaction = self:action(am.series(actions))
+		if show_hint then
+			nodeaction:action(drum_play_hint())
+		end
     end
 	
 	return local_root
@@ -180,6 +183,17 @@ function drum_panel(pattern, show_hint)
 			am.translate(buttons[3].pos) ^ buttons[3],
 			am.translate(buttons[4].pos) ^ buttons[4],
 		}
+end
+
+
+function drum_play_hint()
+    return coroutine.create(function()
+        local panel_node = coroutine.yield()
+        am.wait(display_message("Remember the Sounds!", vec4(1,0,0,1)))
+        am.wait(am.delay( 0.8 * #(panel_node.pattern) ))
+        am.wait(clear_message())
+		return true
+    end)
 end
 
 function drum_clear_hint()
@@ -585,7 +599,6 @@ function typing_clear_hint()
             return true
         end,
         function()
-            clear_message()
             display_prompt("Type the Word!")
             return true
         end,
@@ -846,6 +859,10 @@ function animate_to_dock(panel)
 end
 
 function animate_from_dock(panel)
+	-- tidy up, these two can get left on screen if you fail while they're animating
+	clear_prompt()
+	clear_message()
+	
     ftplog("From dock " .. tostring(panel))
 	win.scene"background":action( am.play(sounds.swipe) )
     return am.series{
@@ -903,6 +920,7 @@ prompt_animating = false
 
 function display_prompt(text, bg_colour)
 	ftplog(text)
+	clear_message()
     if not bg_colour then bg_colour = vec4(0,0,0,1) end
     ftplog("Show prompt "..text)
     local promptNode = am.translate(0,-600):tag"t" ^ am.scale(2):tag"s" ^ 
