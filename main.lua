@@ -388,7 +388,8 @@ function unlock_make_node_line(grid_def, xy1, xy2)
 end
 
 function unlock_make_node_circle(grid_def, xy)
-    local bg_col = vec4(0.7, 0.7, 0.7, 1)
+	local bg_lit = 0.85
+    local bg_col = vec4(0.7*bg_lit, 0.8*bg_lit, 0.9*bg_lit, 1)
     local fg_col = vec4(0.2, 0.2, 0.2, 1)
     local pos = unlock_node_xy_to_local_xy(grid_def, xy)
     return am.group() ^ { 
@@ -703,12 +704,12 @@ function panels.AddOne(activity)
 	{	-- here we define the panel table parameters
 		-- these are used to communicate from the panel to the game level
 		-- we'll give them all default values rather than nil
-		scale = 1,
+		scale = 0,
 		pos = vec3( win.width, win.height, 0 ) * 0.5,
 		state = PanelState.docked,
 		activity = activity,
 		node = am.translate(0,0):action(PanelPosControl)
-			^ am.scale(1):action(PanelScaleControl),
+			^ am.scale(0):action(PanelScaleControl),
 	}
 	
 	scaleNode = p.node"scale"
@@ -856,7 +857,7 @@ function flash_border(panel, colour)
 end
 
 function win_stamp()
-    local superlatives = {"Nice!", "Awesome!", "Radical!"}
+    local superlatives = {"Nice!", "Awesome!", "Radical!", "Super!", "Sweet!"}
     local text = superlatives[math.random(1, #superlatives)]
     local delay = 2
     ftplog("Show win stamp")
@@ -893,7 +894,8 @@ function display_prompt(text, bg_colour)
     if not bg_colour then bg_colour = vec4(0,0,0,1) end
     ftplog("Show prompt "..text)
     local promptNode = am.translate(0,-600):tag"t" ^ am.scale(2):tag"s" ^ 
-        am.group(
+        am.translate(0,-15) ^
+		am.group(
             am.rect(-200, -10, 200, 10, bg_colour), 
             am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
         )
@@ -968,6 +970,7 @@ function display_message(text, bg_colour)
     if not bg_colour then bg_colour = vec4(0,0,0,1) end
     ftplog("Show message "..text)
     local messageNode = am.translate(0,100):tag"t" ^ am.scale(0):tag"s" ^ 
+		am.translate(0,5) ^
         am.group(
             am.rect(-200, -10, 200, 10, bg_colour), 
             am.translate(0, 3) ^ am.text(text, vec4(1,1,1,1))
@@ -1055,7 +1058,7 @@ win.scene:action(coroutine.create(function()
                     panels.so_far = panels.current
                     active_panel.game.show_hint = false
 					if panels.so_far ~= 1 then
-						am.wait(display_message("From The Top!"))
+						am.wait(display_message("From The Top!..."))
 						am.wait(am.delay(1))
 					end
 					clear_message()
@@ -1065,7 +1068,7 @@ win.scene:action(coroutine.create(function()
 						next_panel.game:start()
 					end
                 else
-                    ftplog("OLD PANEL REDONE: Panels sofar ".. panels.so_far..", current "..panels.current)
+                    ftplog("OLD PANEL REDONE: Panels so far ".. panels.so_far..", current "..panels.current)
                     -- completed panel
                     local next_panel = get_next_panel()
                     if next_panel then
