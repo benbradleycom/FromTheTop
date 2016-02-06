@@ -161,9 +161,10 @@ function drum_panel(pattern, show_hint)
 		-- drum hints
 		if show_hint then
 			for dh=1, #pattern do
-				actions[dh] = drum_action( local_root, pattern[dh] )
+				actions[#actions+1] = drum_action( local_root, pattern[dh] )
 			end
 		end
+		actions[#actions+1] = drum_clear_hint()
 		actions[#actions+1] = drum_user_input()
 		self:action(am.series(actions))
     end
@@ -179,6 +180,16 @@ function drum_panel(pattern, show_hint)
 			am.translate(buttons[3].pos) ^ buttons[3],
 			am.translate(buttons[4].pos) ^ buttons[4],
 		}
+end
+
+function drum_clear_hint()
+    return am.series{
+        am.delay(0.3),
+        function()
+            display_prompt("Play the Sounds!")
+            return true
+        end,
+    }
 end
 
 function drum_user_input()
@@ -203,7 +214,10 @@ function drum_user_input()
 				end
 			end
         end
-		return panel_node:won() or panel_node:lost()
+		if panel_node:won() or panel_node:lost() then
+            clear_prompt()
+			return true
+        end
     end
 end
 
@@ -418,7 +432,7 @@ end
 function unlock_play_hint()
     return coroutine.create(function()
         local panel_node = coroutine.yield()
-        am.wait(display_message("Remember the pattern!", vec4(1,0,0,1)))
+        am.wait(display_message("Remember the Pattern!", vec4(1,0,0,1)))
         for i=1, #panel_node.pattern do
             panel_node:add_hint_node(panel_node.pattern[i])
             am.wait(am.delay(0.5))
@@ -435,8 +449,7 @@ function unlock_clear_hint()
             return true
         end,
         function()
-            ftplog("Trace the pattern")
-            display_prompt("Trace the pattern!")
+            display_prompt("Trace the Pattern!")
             return true
         end,
     }
@@ -463,11 +476,10 @@ function unlock_user_input()
                 end
             end
         end
-        local finished = panel_node:lost() or panel_node:won()
-        if finished then
+        if panel_node:lost() or panel_node:won() then
             clear_prompt()
+			return true
         end
-        return finished
     end
 end
 
@@ -551,7 +563,7 @@ function typing_play_hint()
 	return coroutine.create(function()
 		local node = coroutine.yield()
 
-        am.wait(display_message("Remember the word!", vec4(1,0,0,1)))
+        am.wait(display_message("Remember the Word!", vec4(1,0,0,1)))
 		-- Type out word
 		for i=1, #node.word do
 			am.wait(am.delay(0.25))
@@ -574,7 +586,7 @@ function typing_clear_hint()
         end,
         function()
             clear_message()
-            display_prompt("Type the word!")
+            display_prompt("Type the Word!")
             return true
         end,
     }
@@ -585,11 +597,10 @@ function typing_user_input()
 		for i,letter in ipairs({"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"}) do
 			if win:key_pressed(letter) then
 				panel_node.user_text = panel_node.user_text .. letter
-                local finished = panel_node:lost() or panel_node:won()
-                if finished then
+                if panel_node:lost() or panel_node:won() then
                     clear_prompt()
+					return true
                 end
-                return finished
 			end
 		end
 	end
@@ -891,6 +902,7 @@ end
 prompt_animating = false
 
 function display_prompt(text, bg_colour)
+	ftplog(text)
     if not bg_colour then bg_colour = vec4(0,0,0,1) end
     ftplog("Show prompt "..text)
     local promptNode = am.translate(0,-600):tag"t" ^ am.scale(2):tag"s" ^ 
@@ -1076,7 +1088,7 @@ win.scene:action(coroutine.create(function()
                             -- starting a new panel
                             am.wait(win_stamp())
                             ftplog("Win stamp done, new panel message")
-                            am.wait(display_message("New panel"))
+                            am.wait(display_message("New Panel"))
                             advance_panel()
                             am.wait(am.delay(1))
                             am.wait(clear_message())
