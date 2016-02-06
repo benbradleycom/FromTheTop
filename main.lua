@@ -1,7 +1,7 @@
--- only do first puzzle once
--- introduction explanation
--- wait after showing word or pattern
--- make shadow into a border?
+-- wait longer after showing word or pattern
+-- proper win lose screens
+-- make shadow into a border
+-- change background texture on learn
 
 shadow_offset = 0.03
 shadow_color = vec4(0.2, 0.2, 0.2, 1)
@@ -41,7 +41,6 @@ sounds =
 function drum_panel(pattern, show_hint)
 
 	local background_color = vec4(0.8, 0.8, 0.8, 1)
-	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
 	local local_root = am.scale(1)
     local show_hint = true
 	local pattern = {}
@@ -213,8 +212,6 @@ end
 -- unlock pattern
 -------------------------------------------------------
 
-test_pattern = {{0,0}, {1,1}, {1,2}, {1,3}, {2,3}, {3,3}, {3,2}}
-
 function generate_unlock_pattern(pattern_length, grid_size_x, grid_size_y)
     function add_direction(grid_node, direction)
         return { grid_node[1] + direction[1], grid_node[2] + direction[2] }
@@ -275,9 +272,8 @@ end
 function unlock_panel(pattern, grid_size_x, grid_size_y)
 
 	local background_color = vec4(0.7, 0.8, 0.9, 1)
-	local shadow_color     = vec4(0.2, 0.2, 0.2, 1)
     local grid_def = { dx = 0.15, dy = 0.15, size_x = grid_size_x, size_y = grid_size_y }
-
+	
     local local_root = am.scale(1)
     local show_hint = true
     function local_root:set_show_hint(v)
@@ -481,7 +477,6 @@ end
 function typing_panel(word)
 
 	local background_color = vec4(0.9, 0.85, 0.7, 1)
-	local shadow_color = vec4(0.2, 0.2, 0.2, 1)
     local text_color = vec4(0.2, 0.2, 0.2, 1)
 
 	local local_root = am.scale(1)
@@ -935,6 +930,40 @@ end
 
 message_animating = false
 
+function display_title()
+	title_text = [[- FROM THE TOP -
+	
+	You'll be shown a panel containing a pattern,
+	rhythm or word. Remember it, then recreate it.
+	
+	You'll need to learn more panels, each time
+	reproducing all the ones you've learnt so
+	far, in order, from the top.
+	
+	A game by @_benbradley and @fierydrake for
+	Global Game Jam 2016.
+	
+	CLICK TO BEGIN]]
+    ftplog("Show Title")
+    local messageNode = am.translate(0,0):tag"t" ^ am.scale(0):tag"s" ^
+		am.translate(0, -100) ^
+        am.group(
+            am.rect(-200, -130, 200, 130, vec4(0,0,0,0.6)), 
+            am.translate(0, 3) ^ am.text(title_text, vec4(1,1,1,1))
+        )
+    local messageAction = am.series{
+        function() message_animating = true; return true end,
+        am.parallel{
+            am.tween(messageNode"s", 0.25, { scale = vec3(2) }, am.ease.out(am.ease.quadratic)),
+            am.tween(messageNode"t", 0.1, { position2d = vec2(0, 0) }, am.ease.out(am.ease.quadratic)),
+        },
+        function() message_animating = false; return true end,
+    }
+    messageNode:action(messageAction)
+    messageGroup:append(messageNode)
+    return messageAction
+end
+
 function display_message(text, bg_colour)
     if not bg_colour then bg_colour = vec4(0,0,0,1) end
     ftplog("Show message "..text)
@@ -995,6 +1024,10 @@ win.scene = am.group{
     stampGroup
 }
 
+function forclick()
+	return win:mouse_pressed("left") or win:mouse_pressed("right")
+end
+
 -------------------------------------------------------
 -- main game loop
 -------------------------------------------------------
@@ -1002,8 +1035,8 @@ win.scene = am.group{
 --
 win.scene:action(coroutine.create(function()
     local sequence_length = 10
-    am.wait(display_message("Let's go!"))
-    am.wait(am.delay(1))
+    am.wait(display_title)
+    am.wait(forclick)
     am.wait(clear_message())
     while true do
         ftplog("Generating sequence of length "..sequence_length)
@@ -1022,10 +1055,10 @@ win.scene:action(coroutine.create(function()
                     panels.so_far = panels.current
                     active_panel.game.show_hint = false
 					if panels.so_far ~= 1 then
-						am.wait(display_message("From the top!"))
+						am.wait(display_message("From The Top!"))
 						am.wait(am.delay(1))
 					end
-						clear_message()
+					clear_message()
 					if panels.so_far ~= 1 then
 						local next_panel = rewind_to_first_panel()
 						active_panel.game:reset()
