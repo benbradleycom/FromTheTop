@@ -1,20 +1,22 @@
--- wait longer after showing word or pattern
--- proper win lose screens
--- make shadow into a border
--- change background texture on learn
+--[[ TODO
+- scores
+- difficulty levels
+- better win lose screens
+- change background texture on learn / win.scene"background".source = "backlearn.png"
+]]
 
-shadow_offset = 0.03
+shadow_offset = 0.035
 shadow_color = vec4(0.2, 0.2, 0.2, 1)
 
 win = am.window{
     title = "From The Top",
-    width = 1200,
-    height = 800,
+    width = 900,
+    height = 700,
     clear_color = vec4(0.3),
 }
 
 function ftplog(str)
-	log(str)
+	--log(str)
 end
 
 -------------------------------------------------------
@@ -457,7 +459,7 @@ end
 
 function unlock_clear_hint()
     return am.series{
-        am.delay(1),
+        am.delay(1.5),
         function(panel_node)
             panel_node:clear_hint()
             return true
@@ -583,7 +585,7 @@ function typing_play_hint()
 			am.wait(am.delay(0.25))
 			node.word_chars_to_show = i
 		end
-		am.wait(am.delay(0.25))
+		am.wait(am.delay(1.5))
 		node.cursor = false
 	end)
 end
@@ -651,7 +653,7 @@ promptGroup = am.group()
 stampGroup = am.group()
 
 function docked_position(node)
-    return vec3(-550 + (node.p.index * 40), 320, 0)
+    return vec3(-400 + (node.p.index * 40), 320, 0)
 end
 
 function docked_scale(node)
@@ -677,7 +679,7 @@ function PanelScaleControl(node)
 end
 
 function PanelPosControl(node)
-	dockedPos = vec3(-550 + (node.p.index * 40), 320, 0)
+	dockedPos = vec3(-400 + (node.p.index * 40), 320, 0)
 	
 	if node.p.state == PanelState.docked then
 		node.p.pos = dockedPos
@@ -761,11 +763,10 @@ function panels.AddOne(activity)
 	p.index = #panels
 	panels.nodeTable[#panels] = p.node
     panels.nodeGroup:append(p.node)
-
+	
     local pos = docked_position(p.node)
     panels.nodeGroup:prepend(am.translate(pos.x, pos.y) ^ am.scale(0.25) ^
-        {am.rect(-50,-50,50,50,vec4(0,0,0,1)),
-         am.rect(-46,-46,46,46,vec4(.4,.4,.4,1))})
+		am.rect(-46,-46,46,46,vec4(0,0,0,0.4)))
     p.node.hidden = true
 end
 
@@ -1064,10 +1065,9 @@ end
 -------------------------------------------------------
 -- main game loop
 -------------------------------------------------------
--- Sequence 1*, 2* - FROM THE TOP: 1, 2, 3* -- FROM THE TOP: 1, 2, 3, 4*
---
+
 win.scene:action(coroutine.create(function()
-    local sequence_length = 10
+    local sequence_length = 12
     am.wait(display_title)
     am.wait(forclick)
     am.wait(clear_message())
@@ -1119,9 +1119,15 @@ win.scene:action(coroutine.create(function()
                     else
                         ftplog("Sequence won!")
                         am.wait(win_stamp())
-                        clear_message()
-                        -- win screen
-                        -- show score and time
+                        
+						-- simple win screen
+						am.wait(clear_message())
+						am.wait(clear_prompt())
+						am.wait(display_prompt("Game Complete! Well Remembered!"))
+						am.wait(display_message("- CONGRATULATIONS -", vec4(1,0,0,1)))
+						am.wait(am.delay(4))
+						clear_message()
+						am.wait(clear_prompt())
                         break
                     end
                 end
@@ -1129,8 +1135,15 @@ win.scene:action(coroutine.create(function()
 				win.scene"background":action( am.play(sounds.bad) )
                 am.wait(flash_border(active_panel, vec4(1, 0, 0, 1)))
                 ftplog("Sequence failed!")
-                -- show failure screen
-                -- wait for restart
+				
+                -- simple failure screen
+				am.wait(clear_message())
+				am.wait(clear_prompt())
+				am.wait(display_prompt("You Made One Mistake"))
+				am.wait(display_message("- GAME OVER -", vec4(1,0,0,1)))
+				am.wait(am.delay(4))
+				clear_message()
+				am.wait(clear_prompt())
                 break
             else
                 -- Nothing to do, yield for next frame
